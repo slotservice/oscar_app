@@ -8,6 +8,8 @@ export function LabFields() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', unit: '' });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', unit: '' });
 
   useEffect(() => { loadPlants(); }, []);
   useEffect(() => { if (selectedPlant) loadFields(); }, [selectedPlant]);
@@ -50,6 +52,48 @@ export function LabFields() {
     } catch (err: any) { alert(err.message); }
   };
 
+  const startEdit = (field: any) => {
+    setEditingId(field.id);
+    setEditForm({ name: field.name, unit: field.unit });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ name: '', unit: '' });
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !editForm.name.trim() || !editForm.unit.trim()) return;
+    try {
+      await adminApi.labFields.update(editingId, {
+        name: editForm.name.trim(),
+        unit: editForm.unit.trim(),
+      });
+      cancelEdit();
+      loadFields();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
+    try {
+      const token = localStorage.getItem('oscar_admin_token');
+      const response = await fetch(`/api/admin/lab-fields/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || `Delete failed: ${response.status}`);
+      }
+      loadFields();
+    } catch (err: any) { alert(err.message); }
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -74,6 +118,15 @@ export function LabFields() {
         </form>
       )}
 
+      {editingId && (
+        <form onSubmit={handleEdit} style={s.form}>
+          <input style={s.input} placeholder="Field Name *" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
+          <input style={s.input} placeholder="Unit *" value={editForm.unit} onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })} required />
+          <button type="submit" style={s.submitBtn}>Save</button>
+          <button type="button" onClick={cancelEdit} style={s.cancelBtn}>Cancel</button>
+        </form>
+      )}
+
       <div style={s.table}>
         <div style={s.tableHeader}>
           <span style={{ ...s.cell, width: 50 }}>#</span>
@@ -92,10 +145,12 @@ export function LabFields() {
                 {field.active ? 'Active' : 'Disabled'}
               </span>
             </span>
-            <span style={s.cell}>
+            <span style={{ ...s.cell, display: 'flex', gap: 6 }}>
+              <button onClick={() => startEdit(field)} style={s.editBtn}>Edit</button>
               <button onClick={() => toggleActive(field.id, field.active)} style={s.actionBtn}>
                 {field.active ? 'Disable' : 'Enable'}
               </button>
+              <button onClick={() => handleDelete(field.id, field.name)} style={s.deleteBtn}>Delete</button>
             </span>
           </div>
         ))}
@@ -114,11 +169,14 @@ const s: Record<string, React.CSSProperties> = {
   form: { display: 'flex', gap: 12, marginBottom: 24, padding: 16, backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' },
   input: { flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14 },
   submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+  cancelBtn: { padding: '8px 16px', backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
   table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' },
   tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 13, color: '#64748b', textTransform: 'uppercase' },
   tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
   cell: { flex: 1, fontSize: 14 },
   badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
   actionBtn: { padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
+  editBtn: { padding: '4px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+  deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
   empty: { textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 },
 };

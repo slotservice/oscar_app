@@ -112,6 +112,10 @@ export const adminApi = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/admin/thresholds/${id}`, {
+        method: 'DELETE',
+      }),
   },
 
   users: {

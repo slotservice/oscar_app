@@ -50,6 +50,16 @@ adminRouter.put('/plants/:id', async (req: Request, res: Response) => {
   }
 });
 
+adminRouter.delete('/plants/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.plant.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete plant. It may have linked data (rounds, users).' });
+  }
+});
+
 // ─── Checklist Sections ─────────────────────────────────
 
 adminRouter.get('/plants/:plantId/sections', async (req: Request, res: Response) => {
@@ -95,6 +105,16 @@ adminRouter.put('/sections/:id', async (req: Request, res: Response) => {
   }
 });
 
+adminRouter.delete('/sections/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.checklistSection.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete section' });
+  }
+});
+
 // ─── Checklist Items ────────────────────────────────────
 
 adminRouter.post('/sections/:sectionId/items', async (req: Request, res: Response) => {
@@ -127,6 +147,16 @@ adminRouter.put('/items/:id', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: 'Failed to update item' });
+  }
+});
+
+adminRouter.delete('/items/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.checklistItem.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete item' });
   }
 });
 
@@ -169,6 +199,16 @@ adminRouter.put('/lab-fields/:id', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: 'Failed to update lab field' });
+  }
+});
+
+adminRouter.delete('/lab-fields/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.labField.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete lab field. It may have linked threshold rules or entries.' });
   }
 });
 
@@ -222,6 +262,16 @@ adminRouter.put('/thresholds/:id', async (req: Request, res: Response) => {
   }
 });
 
+adminRouter.delete('/thresholds/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.thresholdRule.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete threshold' });
+  }
+});
+
 // ─── Observation Tags ───────────────────────────────────
 
 adminRouter.get('/plants/:plantId/tags', async (req: Request, res: Response) => {
@@ -261,6 +311,16 @@ adminRouter.put('/tags/:id', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: 'Failed to update tag' });
+  }
+});
+
+adminRouter.delete('/tags/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.observationTag.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete tag. It may have linked rules or entries.' });
   }
 });
 
@@ -308,6 +368,16 @@ adminRouter.put('/tag-rules/:id', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: 'Failed to update tag rule' });
+  }
+});
+
+adminRouter.delete('/tag-rules/:id', async (req: Request, res: Response) => {
+  try {
+    await prisma.tagRule.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete tag rule' });
   }
 });
 

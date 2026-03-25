@@ -12,8 +12,25 @@ export function ObservationTags() {
   const [tagForm, setTagForm] = useState({ name: '', category: '' });
   const [ruleForm, setRuleForm] = useState({ tagId: '', suggestionText: '', severity: 'CAUTION' });
 
+  // Inline editing state for tags
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editTagForm, setEditTagForm] = useState({ name: '', category: '' });
+
+  // Inline editing state for tag rules
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [editRuleForm, setEditRuleForm] = useState({ suggestionText: '', severity: '' });
+
   useEffect(() => { loadPlants(); }, []);
   useEffect(() => { if (selectedPlant) loadData(); }, [selectedPlant]);
+
+  const authHeaders = (): Record<string, string> => ({
+    'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}`,
+  });
+
+  const authHeadersJson = (): Record<string, string> => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}`,
+  });
 
   const loadPlants = async () => {
     try {
@@ -27,8 +44,8 @@ export function ObservationTags() {
   const loadData = async () => {
     try {
       const [tagsRes, rulesRes] = await Promise.all([
-        fetch(`/api/admin/plants/${selectedPlant}/tags`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}` } }).then(r => r.json()),
-        fetch(`/api/admin/plants/${selectedPlant}/tag-rules`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}` } }).then(r => r.json()),
+        fetch(`/api/admin/plants/${selectedPlant}/tags`, { headers: authHeaders() }).then(r => r.json()),
+        fetch(`/api/admin/plants/${selectedPlant}/tag-rules`, { headers: authHeaders() }).then(r => r.json()),
       ]);
       setTags(tagsRes.data || []);
       setTagRules(rulesRes.data || []);
@@ -41,7 +58,7 @@ export function ObservationTags() {
     try {
       await fetch(`/api/admin/plants/${selectedPlant}/tags`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}` },
+        headers: authHeadersJson(),
         body: JSON.stringify({ name: tagForm.name.trim(), category: tagForm.category.trim() || null }),
       });
       setTagForm({ name: '', category: '' });
@@ -54,9 +71,44 @@ export function ObservationTags() {
     try {
       await fetch(`/api/admin/tags/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}` },
+        headers: authHeadersJson(),
         body: JSON.stringify({ active: !active }),
       });
+      loadData();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const deleteTag = async (id: string, name: string) => {
+    if (!window.confirm(`Delete tag ${name}?`)) return;
+    try {
+      await fetch(`/api/admin/tags/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      loadData();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const startEditTag = (tag: any) => {
+    setEditingTagId(tag.id);
+    setEditTagForm({ name: tag.name, category: tag.category || '' });
+  };
+
+  const cancelEditTag = () => {
+    setEditingTagId(null);
+    setEditTagForm({ name: '', category: '' });
+  };
+
+  const saveEditTag = async (id: string) => {
+    if (!editTagForm.name.trim()) return;
+    try {
+      await fetch(`/api/admin/tags/${id}`, {
+        method: 'PUT',
+        headers: authHeadersJson(),
+        body: JSON.stringify({ name: editTagForm.name.trim(), category: editTagForm.category.trim() || null }),
+      });
+      setEditingTagId(null);
+      setEditTagForm({ name: '', category: '' });
       loadData();
     } catch (err: any) { alert(err.message); }
   };
@@ -67,7 +119,7 @@ export function ObservationTags() {
     try {
       await fetch(`/api/admin/plants/${selectedPlant}/tag-rules`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}` },
+        headers: authHeadersJson(),
         body: JSON.stringify(ruleForm),
       });
       setRuleForm({ tagId: '', suggestionText: '', severity: 'CAUTION' });
@@ -80,9 +132,44 @@ export function ObservationTags() {
     try {
       await fetch(`/api/admin/tag-rules/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('oscar_admin_token')}` },
+        headers: authHeadersJson(),
         body: JSON.stringify({ active: !active }),
       });
+      loadData();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const deleteRule = async (id: string) => {
+    if (!window.confirm('Delete this rule?')) return;
+    try {
+      await fetch(`/api/admin/tag-rules/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      loadData();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const startEditRule = (rule: any) => {
+    setEditingRuleId(rule.id);
+    setEditRuleForm({ suggestionText: rule.suggestionText, severity: rule.severity });
+  };
+
+  const cancelEditRule = () => {
+    setEditingRuleId(null);
+    setEditRuleForm({ suggestionText: '', severity: '' });
+  };
+
+  const saveEditRule = async (id: string) => {
+    if (!editRuleForm.suggestionText.trim()) return;
+    try {
+      await fetch(`/api/admin/tag-rules/${id}`, {
+        method: 'PUT',
+        headers: authHeadersJson(),
+        body: JSON.stringify({ suggestionText: editRuleForm.suggestionText.trim(), severity: editRuleForm.severity }),
+      });
+      setEditingRuleId(null);
+      setEditRuleForm({ suggestionText: '', severity: '' });
       loadData();
     } catch (err: any) { alert(err.message); }
   };
@@ -123,18 +210,52 @@ export function ObservationTags() {
         </div>
         {tags.map((tag) => (
           <div key={tag.id} style={{ ...s.tableRow, opacity: tag.active ? 1 : 0.5 }}>
-            <span style={{ ...s.cell, flex: 2, fontWeight: 600 }}>{tag.name}</span>
-            <span style={{ ...s.cell, color: '#64748b' }}>{tag.category || '—'}</span>
-            <span style={s.cell}>
-              <span style={{ ...s.badge, backgroundColor: tag.active ? '#dcfce7' : '#fee2e2', color: tag.active ? '#22c55e' : '#ef4444' }}>
-                {tag.active ? 'Active' : 'Disabled'}
-              </span>
-            </span>
-            <span style={s.cell}>
-              <button onClick={() => toggleTag(tag.id, tag.active)} style={s.actionBtn}>
-                {tag.active ? 'Disable' : 'Enable'}
-              </button>
-            </span>
+            {editingTagId === tag.id ? (
+              <>
+                <span style={{ ...s.cell, flex: 2 }}>
+                  <input
+                    style={s.inlineInput}
+                    value={editTagForm.name}
+                    onChange={(e) => setEditTagForm({ ...editTagForm, name: e.target.value })}
+                    placeholder="Tag Name"
+                  />
+                </span>
+                <span style={s.cell}>
+                  <input
+                    style={s.inlineInput}
+                    value={editTagForm.category}
+                    onChange={(e) => setEditTagForm({ ...editTagForm, category: e.target.value })}
+                    placeholder="Category"
+                  />
+                </span>
+                <span style={s.cell}>
+                  <span style={{ ...s.badge, backgroundColor: tag.active ? '#dcfce7' : '#fee2e2', color: tag.active ? '#22c55e' : '#ef4444' }}>
+                    {tag.active ? 'Active' : 'Disabled'}
+                  </span>
+                </span>
+                <span style={{ ...s.cell, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button onClick={() => saveEditTag(tag.id)} style={s.saveBtn}>Save</button>
+                  <button onClick={cancelEditTag} style={s.cancelBtn}>Cancel</button>
+                </span>
+              </>
+            ) : (
+              <>
+                <span style={{ ...s.cell, flex: 2, fontWeight: 600 }}>{tag.name}</span>
+                <span style={{ ...s.cell, color: '#64748b' }}>{tag.category || '—'}</span>
+                <span style={s.cell}>
+                  <span style={{ ...s.badge, backgroundColor: tag.active ? '#dcfce7' : '#fee2e2', color: tag.active ? '#22c55e' : '#ef4444' }}>
+                    {tag.active ? 'Active' : 'Disabled'}
+                  </span>
+                </span>
+                <span style={{ ...s.cell, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button onClick={() => toggleTag(tag.id, tag.active)} style={s.actionBtn}>
+                    {tag.active ? 'Disable' : 'Enable'}
+                  </button>
+                  <button onClick={() => startEditTag(tag)} style={s.editBtn}>Edit</button>
+                  <button onClick={() => deleteTag(tag.id, tag.name)} style={s.deleteBtn}>Delete</button>
+                </span>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -173,23 +294,60 @@ export function ObservationTags() {
         </div>
         {tagRules.map((rule) => (
           <div key={rule.id} style={{ ...s.tableRow, opacity: rule.active ? 1 : 0.5 }}>
-            <span style={{ ...s.cell, flex: 1.5, fontWeight: 600 }}>{rule.tag?.name || '—'}</span>
-            <span style={{ ...s.cell, flex: 2, fontSize: 13, color: '#64748b' }}>{rule.suggestionText}</span>
-            <span style={s.cell}>
-              <span style={{ ...s.severityBadge, backgroundColor: rule.severity === 'CRITICAL' ? '#fee2e2' : '#fef9c3', color: rule.severity === 'CRITICAL' ? '#ef4444' : '#eab308' }}>
-                {rule.severity}
-              </span>
-            </span>
-            <span style={s.cell}>
-              <span style={{ ...s.badge, backgroundColor: rule.active ? '#dcfce7' : '#fee2e2', color: rule.active ? '#22c55e' : '#ef4444' }}>
-                {rule.active ? 'Active' : 'Disabled'}
-              </span>
-            </span>
-            <span style={s.cell}>
-              <button onClick={() => toggleRule(rule.id, rule.active)} style={s.actionBtn}>
-                {rule.active ? 'Disable' : 'Enable'}
-              </button>
-            </span>
+            {editingRuleId === rule.id ? (
+              <>
+                <span style={{ ...s.cell, flex: 1.5, fontWeight: 600 }}>{rule.tag?.name || '—'}</span>
+                <span style={{ ...s.cell, flex: 2 }}>
+                  <input
+                    style={s.inlineInput}
+                    value={editRuleForm.suggestionText}
+                    onChange={(e) => setEditRuleForm({ ...editRuleForm, suggestionText: e.target.value })}
+                    placeholder="Suggestion text"
+                  />
+                </span>
+                <span style={s.cell}>
+                  <select
+                    style={s.inlineInput}
+                    value={editRuleForm.severity}
+                    onChange={(e) => setEditRuleForm({ ...editRuleForm, severity: e.target.value })}
+                  >
+                    <option value="CAUTION">Caution</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                </span>
+                <span style={s.cell}>
+                  <span style={{ ...s.badge, backgroundColor: rule.active ? '#dcfce7' : '#fee2e2', color: rule.active ? '#22c55e' : '#ef4444' }}>
+                    {rule.active ? 'Active' : 'Disabled'}
+                  </span>
+                </span>
+                <span style={{ ...s.cell, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button onClick={() => saveEditRule(rule.id)} style={s.saveBtn}>Save</button>
+                  <button onClick={cancelEditRule} style={s.cancelBtn}>Cancel</button>
+                </span>
+              </>
+            ) : (
+              <>
+                <span style={{ ...s.cell, flex: 1.5, fontWeight: 600 }}>{rule.tag?.name || '—'}</span>
+                <span style={{ ...s.cell, flex: 2, fontSize: 13, color: '#64748b' }}>{rule.suggestionText}</span>
+                <span style={s.cell}>
+                  <span style={{ ...s.severityBadge, backgroundColor: rule.severity === 'CRITICAL' ? '#fee2e2' : '#fef9c3', color: rule.severity === 'CRITICAL' ? '#ef4444' : '#eab308' }}>
+                    {rule.severity}
+                  </span>
+                </span>
+                <span style={s.cell}>
+                  <span style={{ ...s.badge, backgroundColor: rule.active ? '#dcfce7' : '#fee2e2', color: rule.active ? '#22c55e' : '#ef4444' }}>
+                    {rule.active ? 'Active' : 'Disabled'}
+                  </span>
+                </span>
+                <span style={{ ...s.cell, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button onClick={() => toggleRule(rule.id, rule.active)} style={s.actionBtn}>
+                    {rule.active ? 'Disable' : 'Enable'}
+                  </button>
+                  <button onClick={() => startEditRule(rule)} style={s.editBtn}>Edit</button>
+                  <button onClick={() => deleteRule(rule.id)} style={s.deleteBtn}>Delete</button>
+                </span>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -216,5 +374,10 @@ const s: Record<string, React.CSSProperties> = {
   badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
   severityBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
   actionBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
+  editBtn: { padding: '3px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+  deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+  saveBtn: { padding: '3px 10px', border: '1px solid #bbf7d0', borderRadius: 6, backgroundColor: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+  cancelBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', color: '#64748b', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+  inlineInput: { width: '100%', padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 13 },
   empty: { textAlign: 'center', padding: 24, color: '#94a3b8', fontSize: 14 },
 };

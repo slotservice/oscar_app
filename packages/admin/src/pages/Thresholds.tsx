@@ -17,6 +17,15 @@ export function Thresholds() {
     suggestionText: '',
   });
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    cautionLow: '',
+    cautionHigh: '',
+    criticalLow: '',
+    criticalHigh: '',
+    suggestionText: '',
+  });
+
   useEffect(() => {
     loadPlants();
   }, []);
@@ -78,6 +87,57 @@ export function Thresholds() {
     }
   };
 
+  const startEdit = (t: any) => {
+    setEditingId(t.id);
+    setEditForm({
+      cautionLow: t.cautionLow != null ? String(t.cautionLow) : '',
+      cautionHigh: t.cautionHigh != null ? String(t.cautionHigh) : '',
+      criticalLow: t.criticalLow != null ? String(t.criticalLow) : '',
+      criticalHigh: t.criticalHigh != null ? String(t.criticalHigh) : '',
+      suggestionText: t.suggestionText || '',
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ cautionLow: '', cautionHigh: '', criticalLow: '', criticalHigh: '', suggestionText: '' });
+  };
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await adminApi.thresholds.update(editingId, {
+        cautionLow: editForm.cautionLow ? parseFloat(editForm.cautionLow) : null,
+        cautionHigh: editForm.cautionHigh ? parseFloat(editForm.cautionHigh) : null,
+        criticalLow: editForm.criticalLow ? parseFloat(editForm.criticalLow) : null,
+        criticalHigh: editForm.criticalHigh ? parseFloat(editForm.criticalHigh) : null,
+        suggestionText: editForm.suggestionText,
+      });
+      cancelEdit();
+      loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete the threshold rule for "${name}"?`)) return;
+    try {
+      const token = localStorage.getItem('oscar_admin_token');
+      await fetch(`/api/admin/thresholds/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -119,6 +179,25 @@ export function Thresholds() {
         </form>
       )}
 
+      {editingId && (
+        <form onSubmit={handleEditSave} style={s.editForm}>
+          <div style={s.editFormTitle}>
+            Editing: {thresholds.find((t) => t.id === editingId)?.labField?.name || 'Threshold'}
+          </div>
+          <div style={s.formRow}>
+            <input style={s.input} type="number" step="any" placeholder="Caution Low" value={editForm.cautionLow} onChange={(e) => setEditForm({ ...editForm, cautionLow: e.target.value })} />
+            <input style={s.input} type="number" step="any" placeholder="Caution High" value={editForm.cautionHigh} onChange={(e) => setEditForm({ ...editForm, cautionHigh: e.target.value })} />
+            <input style={s.input} type="number" step="any" placeholder="Critical Low" value={editForm.criticalLow} onChange={(e) => setEditForm({ ...editForm, criticalLow: e.target.value })} />
+            <input style={s.input} type="number" step="any" placeholder="Critical High" value={editForm.criticalHigh} onChange={(e) => setEditForm({ ...editForm, criticalHigh: e.target.value })} />
+          </div>
+          <div style={s.formRow}>
+            <input style={{ ...s.input, flex: 3 }} placeholder="Suggestion text" value={editForm.suggestionText} onChange={(e) => setEditForm({ ...editForm, suggestionText: e.target.value })} />
+            <button type="submit" style={s.saveBtn}>Save</button>
+            <button type="button" onClick={cancelEdit} style={s.cancelBtn}>Cancel</button>
+          </div>
+        </form>
+      )}
+
       <div style={s.table}>
         <div style={s.tableHeader}>
           <span style={{ ...s.cell, flex: 1.5 }}>Lab Field</span>
@@ -127,7 +206,7 @@ export function Thresholds() {
           <span style={s.cell}>Critical Low</span>
           <span style={s.cell}>Critical High</span>
           <span style={{ ...s.cell, flex: 2 }}>Suggestion</span>
-          <span style={s.cell}>Actions</span>
+          <span style={{ ...s.cell, flex: 1.5 }}>Actions</span>
         </div>
         {thresholds.map((t) => (
           <div key={t.id} style={{ ...s.tableRow, opacity: t.active ? 1 : 0.5 }}>
@@ -137,10 +216,12 @@ export function Thresholds() {
             <span style={{ ...s.cell, color: '#ef4444' }}>{t.criticalLow ?? '—'}</span>
             <span style={{ ...s.cell, color: '#ef4444' }}>{t.criticalHigh ?? '—'}</span>
             <span style={{ ...s.cell, flex: 2, fontSize: 13, color: '#64748b' }}>{t.suggestionText}</span>
-            <span style={s.cell}>
+            <span style={{ ...s.cell, flex: 1.5, display: 'flex', gap: 6 }}>
+              <button onClick={() => startEdit(t)} style={s.editBtn}>Edit</button>
               <button onClick={() => toggleActive(t.id, t.active)} style={s.actionBtn}>
                 {t.active ? 'Disable' : 'Enable'}
               </button>
+              <button onClick={() => handleDelete(t.id, t.labField?.name || 'this rule')} style={s.deleteBtn}>Delete</button>
             </span>
           </div>
         ))}
@@ -160,13 +241,19 @@ const s: Record<string, React.CSSProperties> = {
   plantSelect: { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
   addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
   form: { marginBottom: 24, padding: 16, backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12 },
+  editForm: { marginBottom: 24, padding: 16, backgroundColor: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe', display: 'flex', flexDirection: 'column', gap: 12 },
+  editFormTitle: { fontSize: 14, fontWeight: 600, color: '#1e40af' },
   formRow: { display: 'flex', gap: 12 },
   input: { flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14 },
   submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+  saveBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+  cancelBtn: { padding: '8px 16px', backgroundColor: '#fff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
   table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' },
   tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 12, color: '#64748b', textTransform: 'uppercase' },
   tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
   cell: { flex: 1, fontSize: 13 },
   actionBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
+  editBtn: { padding: '3px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', cursor: 'pointer', fontSize: 12, color: '#1e40af', fontWeight: 600 },
+  deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600 },
   empty: { textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 },
 };

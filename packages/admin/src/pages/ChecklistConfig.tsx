@@ -11,6 +11,12 @@ export function ChecklistConfig() {
   const [newSection, setNewSection] = useState('');
   const [newItems, setNewItems] = useState<Record<string, string>>({});
 
+  // Inline editing state
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemName, setEditingItemName] = useState('');
+
   useEffect(() => {
     loadPlants();
   }, []);
@@ -81,6 +87,98 @@ export function ChecklistConfig() {
     }
   };
 
+  // --- Edit handlers ---
+
+  const startEditSection = (section: any) => {
+    setEditingSectionId(section.id);
+    setEditingSectionName(section.name);
+  };
+
+  const saveEditSection = async (sectionId: string) => {
+    const trimmed = editingSectionName.trim();
+    if (!trimmed) return;
+    try {
+      await adminApi.sections.update(sectionId, { name: trimmed });
+      setEditingSectionId(null);
+      setEditingSectionName('');
+      loadSections();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const cancelEditSection = () => {
+    setEditingSectionId(null);
+    setEditingSectionName('');
+  };
+
+  const startEditItem = (item: any) => {
+    setEditingItemId(item.id);
+    setEditingItemName(item.name);
+  };
+
+  const saveEditItem = async (itemId: string) => {
+    const trimmed = editingItemName.trim();
+    if (!trimmed) return;
+    try {
+      await adminApi.sections.updateItem(itemId, { name: trimmed });
+      setEditingItemId(null);
+      setEditingItemName('');
+      loadSections();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const cancelEditItem = () => {
+    setEditingItemId(null);
+    setEditingItemName('');
+  };
+
+  // --- Delete handlers ---
+
+  const deleteSection = async (section: any) => {
+    if (!window.confirm(`Delete section ${section.name} and all its items?`)) return;
+    try {
+      const token = localStorage.getItem('oscar_admin_token');
+      const resp = await fetch(`/api/admin/sections/${section.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || `Delete failed: ${resp.status}`);
+      }
+      loadSections();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const deleteItem = async (item: any) => {
+    if (!window.confirm(`Delete item ${item.name}?`)) return;
+    try {
+      const token = localStorage.getItem('oscar_admin_token');
+      const resp = await fetch(`/api/admin/items/${item.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || `Delete failed: ${resp.status}`);
+      }
+      loadSections();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -105,24 +203,68 @@ export function ChecklistConfig() {
         <div key={section.id} style={s.sectionCard}>
           <div style={s.sectionHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h3 style={{ ...s.sectionName, opacity: section.active ? 1 : 0.5 }}>{section.name}</h3>
-              {!section.active && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, backgroundColor: '#fee2e2', color: '#ef4444' }}>DISABLED</span>}
+              {editingSectionId === section.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    style={{ padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, fontWeight: 600 }}
+                    value={editingSectionName}
+                    onChange={(e) => setEditingSectionName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEditSection(section.id);
+                      if (e.key === 'Escape') cancelEditSection();
+                    }}
+                    autoFocus
+                  />
+                  <button onClick={() => saveEditSection(section.id)} style={s.addBtn}>Save</button>
+                  <button onClick={cancelEditSection} style={s.toggleBtn}>Cancel</button>
+                </div>
+              ) : (
+                <>
+                  <h3 style={{ ...s.sectionName, opacity: section.active ? 1 : 0.5 }}>{section.name}</h3>
+                  {!section.active && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, backgroundColor: '#fee2e2', color: '#ef4444' }}>DISABLED</span>}
+                </>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={s.itemCount}>{section.items?.length || 0} items</span>
               <button onClick={async () => { try { await adminApi.sections.update(section.id, { active: !section.active }); loadSections(); } catch (err: any) { alert(err.message); } }} style={{ ...s.toggleBtn, color: section.active ? '#ef4444' : '#22c55e' }}>
                 {section.active ? 'Disable Section' : 'Enable Section'}
               </button>
+              <button onClick={() => startEditSection(section)} style={s.editBtn}>Edit</button>
+              <button onClick={() => deleteSection(section)} style={s.deleteBtn}>Delete</button>
             </div>
           </div>
 
           {/* Items */}
           {section.items?.map((item: any) => (
             <div key={item.id} style={{ ...s.item, opacity: item.active ? 1 : 0.5 }}>
-              <span style={s.itemName}>{item.name}</span>
-              <button onClick={() => toggleItem(item.id, item.active)} style={s.toggleBtn}>
-                {item.active ? 'Disable' : 'Enable'}
-              </button>
+              {editingItemId === item.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <input
+                    style={{ padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13, fontWeight: 500, flex: 1 }}
+                    value={editingItemName}
+                    onChange={(e) => setEditingItemName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEditItem(item.id);
+                      if (e.key === 'Escape') cancelEditItem();
+                    }}
+                    autoFocus
+                  />
+                  <button onClick={() => saveEditItem(item.id)} style={s.addBtn}>Save</button>
+                  <button onClick={cancelEditItem} style={s.toggleBtn}>Cancel</button>
+                </div>
+              ) : (
+                <>
+                  <span style={s.itemName}>{item.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={() => toggleItem(item.id, item.active)} style={s.toggleBtn}>
+                      {item.active ? 'Disable' : 'Enable'}
+                    </button>
+                    <button onClick={() => startEditItem(item)} style={s.editBtn}>Edit</button>
+                    <button onClick={() => deleteItem(item)} style={s.deleteBtn}>Delete</button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
 
@@ -162,6 +304,8 @@ const s: Record<string, React.CSSProperties> = {
   item: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #f1f5f9' },
   itemName: { fontSize: 14, fontWeight: 500 },
   toggleBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
+  editBtn: { padding: '3px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+  deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
   addItemRow: { display: 'flex', gap: 8, padding: '10px 16px' },
   itemInput: { flex: 1, padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13 },
   addItemBtn: { width: 32, height: 32, border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#f8fafc', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' },
