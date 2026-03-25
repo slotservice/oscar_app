@@ -23,6 +23,17 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Debug: check DB status + trigger setup
+app.get('/api/setup', async (_req, res) => {
+  try {
+    const { autoSetup } = require('./setup');
+    await autoSetup();
+    res.json({ success: true, message: 'Setup complete' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/plants', plantsRouter);
