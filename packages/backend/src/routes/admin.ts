@@ -366,12 +366,33 @@ adminRouter.put('/users/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Delete user
+adminRouter.delete('/users/:id', async (req: Request, res: Response) => {
+  try {
+    // Remove plant assignments first
+    await prisma.userPlant.deleteMany({ where: { userId: req.params.id } });
+    await prisma.user.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to delete user. User may have daily rounds linked.' });
+  }
+});
+
 // Assign user to plant
 adminRouter.post('/users/:userId/assign-plant', async (req: Request, res: Response) => {
   try {
     const { plantId } = req.body;
     if (!plantId) {
       res.status(400).json({ success: false, error: 'plantId required' });
+      return;
+    }
+    // Check if already assigned
+    const existing = await prisma.userPlant.findUnique({
+      where: { userId_plantId: { userId: req.params.userId, plantId } },
+    });
+    if (existing) {
+      res.status(409).json({ success: false, error: 'User is already assigned to this plant' });
       return;
     }
     const assignment = await prisma.userPlant.create({

@@ -18,6 +18,12 @@
         "backgroundColor": "#1E40AF"
       },
       "package": "com.oscar.app"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "79676c6f-3c89-4ff0-a255-9a82d3fec366"
+      }
+    },
+    "owner": "rubble0292"
   }
 }
