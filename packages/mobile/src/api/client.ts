@@ -1,11 +1,5 @@
-import { Platform } from 'react-native';
-
-// For Android emulators: use your PC's local network IP
-// For web: localhost works fine
-// For physical devices: use your PC's local network IP
-const API_BASE = Platform.OS === 'web'
-  ? 'http://localhost:3000/api'
-  : 'http://192.168.128.43:3000/api';
+// Cloud backend URL
+const API_BASE = 'https://oscar-app-3qkb.onrender.com/api';
 
 let authToken: string | null = null;
 
