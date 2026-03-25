@@ -34,3 +34,4 @@ coverage/
 .turbo/
 packages/backend/test_prisma.js
 packages/mobile/gen_icon.js
+*.apk
