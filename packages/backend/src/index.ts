@@ -49,8 +49,11 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
-app.listen(config.port, () => {
+import { autoSetup } from './setup';
+
+app.listen(config.port, async () => {
   console.log(`Oscar API running on port ${config.port}`);
+  await autoSetup();
 });
 
 export default app;
