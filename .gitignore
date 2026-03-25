@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Expo
+.expo/
+*.tsbuildinfo
+packages/mobile/android/
+packages/mobile/ios/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+hs_err_pid*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Test / temp files
+coverage/
+.turbo/
+packages/backend/test_prisma.js
+packages/mobile/gen_icon.js

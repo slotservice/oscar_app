@@ -1,0 +1,24 @@
+databases:
+  - name: oscar-db
+    plan: free
+    databaseName: oscar
+    user: oscar
+
+services:
+  - type: web
+    name: oscar-api
+    plan: free
+    runtime: node
+    buildCommand: npm install && cd packages/admin && npx vite build && cd ../backend && npx prisma generate
+    startCommand: cd packages/backend && npx ts-node --transpile-only src/index.ts
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: oscar-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 3000
+      - key: NODE_VERSION
+        value: 20.19.2

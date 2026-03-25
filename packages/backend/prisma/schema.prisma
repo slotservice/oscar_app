@@ -1,0 +1,284 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum Role {
+  OPERATOR
+  SUPERVISOR
+  ADMIN
+}
+
+enum ChecklistStatus {
+  OK
+  ATTENTION
+  NA
+}
+
+enum RoundStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum Condition {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum Severity {
+  GREEN
+  CAUTION
+  CRITICAL
+}
+
+// ─── Users & Plants ─────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  role         Role     @default(OPERATOR)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  plants UserPlant[]
+  rounds DailyRound[]
+
+  @@map("users")
+}
+
+model Plant {
+  id        String   @id @default(uuid())
+  name      String
+  location  String?
+  plantType String?  @map("plant_type")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users             UserPlant[]
+  checklistSections ChecklistSection[]
+  labFields         LabField[]
+  observationTags   ObservationTag[]
+  thresholdRules    ThresholdRule[]
+  tagRules          TagRule[]
+  rounds            DailyRound[]
+
+  @@map("plants")
+}
+
+model UserPlant {
+  userId  String @map("user_id")
+  plantId String @map("plant_id")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, plantId])
+  @@map("user_plants")
+}
+
+// ─── Checklist Configuration ────────────────────────────
+
+model ChecklistSection {
+  id           String  @id @default(uuid())
+  plantId      String  @map("plant_id")
+  name         String
+  displayOrder Int     @map("display_order")
+  active       Boolean @default(true)
+
+  plant Plant           @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  items ChecklistItem[]
+
+  @@map("checklist_sections")
+}
+
+model ChecklistItem {
+  id                      String  @id @default(uuid())
+  sectionId               String  @map("section_id")
+  name                    String
+  description             String?
+  displayOrder            Int     @map("display_order")
+  requiresNoteOnAttention Boolean @default(true) @map("requires_note_on_attention")
+  active                  Boolean @default(true)
+
+  section ChecklistSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  entries ChecklistEntry[]
+
+  @@map("checklist_items")
+}
+
+// ─── Lab Configuration ──────────────────────────────────
+
+model LabField {
+  id           String  @id @default(uuid())
+  plantId      String  @map("plant_id")
+  name         String
+  unit         String
+  displayOrder Int     @map("display_order")
+  active       Boolean @default(true)
+
+  plant      Plant           @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  entries    LabEntry[]
+  thresholds ThresholdRule[]
+
+  @@map("lab_fields")
+}
+
+// ─── Observation Tags ───────────────────────────────────
+
+model ObservationTag {
+  id       String  @id @default(uuid())
+  plantId  String  @map("plant_id")
+  name     String
+  category String?
+  active   Boolean @default(true)
+
+  plant   Plant              @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  entries ObservationEntry[]
+  rules   TagRule[]
+
+  @@map("observation_tags")
+}
+
+// ─── Rules Configuration ────────────────────────────────
+
+model ThresholdRule {
+  id             String  @id @default(uuid())
+  plantId        String  @map("plant_id")
+  labFieldId     String  @map("lab_field_id")
+  cautionLow     Float?  @map("caution_low")
+  cautionHigh    Float?  @map("caution_high")
+  criticalLow    Float?  @map("critical_low")
+  criticalHigh   Float?  @map("critical_high")
+  suggestionText String  @map("suggestion_text")
+  active         Boolean @default(true)
+
+  plant    Plant    @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  labField LabField @relation(fields: [labFieldId], references: [id], onDelete: Cascade)
+
+  @@map("threshold_rules")
+}
+
+model TagRule {
+  id             String   @id @default(uuid())
+  plantId        String   @map("plant_id")
+  tagId          String   @map("tag_id")
+  suggestionText String   @map("suggestion_text")
+  severity       Severity @default(CAUTION)
+  active         Boolean  @default(true)
+
+  plant Plant          @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  tag   ObservationTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@map("tag_rules")
+}
+
+// ─── Daily Round (Operational Data) ─────────────────────
+
+model DailyRound {
+  id               String      @id @default(uuid())
+  plantId          String      @map("plant_id")
+  operatorId       String      @map("operator_id")
+  date             DateTime    @db.Date
+  startedAt        DateTime    @default(now()) @map("started_at")
+  completedAt      DateTime?   @map("completed_at")
+  signedOff        Boolean     @default(false) @map("signed_off")
+  status           RoundStatus @default(IN_PROGRESS)
+  overallCondition Condition?  @map("overall_condition")
+  notes            String?
+
+  plant              Plant              @relation(fields: [plantId], references: [id])
+  operator           User               @relation(fields: [operatorId], references: [id])
+  checklistEntries   ChecklistEntry[]
+  labEntries         LabEntry[]
+  observationEntries ObservationEntry[]
+  suggestions        Suggestion[]
+  issues             Issue[]
+
+  @@unique([plantId, operatorId, date])
+  @@map("daily_rounds")
+}
+
+model ChecklistEntry {
+  id        String          @id @default(uuid())
+  roundId   String          @map("round_id")
+  itemId    String          @map("item_id")
+  status    ChecklistStatus
+  note      String?
+  imageUrl  String?         @map("image_url")
+  timestamp DateTime        @default(now())
+
+  round DailyRound    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  item  ChecklistItem @relation(fields: [itemId], references: [id])
+
+  @@unique([roundId, itemId])
+  @@map("checklist_entries")
+}
+
+model LabEntry {
+  id         String   @id @default(uuid())
+  roundId    String   @map("round_id")
+  labFieldId String   @map("lab_field_id")
+  value      Float
+  timestamp  DateTime @default(now())
+
+  round    DailyRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  labField LabField   @relation(fields: [labFieldId], references: [id])
+
+  @@unique([roundId, labFieldId])
+  @@map("lab_entries")
+}
+
+model ObservationEntry {
+  id        String   @id @default(uuid())
+  roundId   String   @map("round_id")
+  tagId     String   @map("tag_id")
+  area      String?
+  note      String?
+  timestamp DateTime @default(now())
+
+  round DailyRound     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  tag   ObservationTag @relation(fields: [tagId], references: [id])
+
+  @@map("observation_entries")
+}
+
+model Suggestion {
+  id           String   @id @default(uuid())
+  roundId      String   @map("round_id")
+  ruleType     String   @map("rule_type")
+  ruleName     String   @map("rule_name")
+  message      String
+  severity     Severity
+  acknowledged Boolean  @default(false)
+  timestamp    DateTime @default(now())
+
+  round DailyRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@map("suggestions")
+}
+
+model Issue {
+  id             String   @id @default(uuid())
+  roundId        String   @map("round_id")
+  description    String
+  actionTaken    String?  @map("action_taken")
+  supervisorFlag Boolean  @default(false) @map("supervisor_flag")
+  resolved       Boolean  @default(false)
+  timestamp      DateTime @default(now())
+
+  round DailyRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@map("issues")
+}

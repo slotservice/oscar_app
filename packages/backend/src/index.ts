@@ -1,0 +1,56 @@
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { config } from './config';
+import { authRouter } from './routes/auth';
+import { plantsRouter } from './routes/plants';
+import { roundsRouter } from './routes/rounds';
+import { checklistRouter } from './routes/checklist';
+import { labsRouter } from './routes/labs';
+import { observationsRouter } from './routes/observations';
+import { suggestionsRouter } from './routes/suggestions';
+import { issuesRouter } from './routes/issues';
+import { historyRouter } from './routes/history';
+import { adminRouter } from './routes/admin';
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Routes
+app.use('/api/auth', authRouter);
+app.use('/api/plants', plantsRouter);
+app.use('/api/rounds', roundsRouter);
+app.use('/api/rounds', checklistRouter);
+app.use('/api/rounds', labsRouter);
+app.use('/api/rounds', observationsRouter);
+app.use('/api/rounds', suggestionsRouter);
+app.use('/api/rounds', issuesRouter);
+app.use('/api/history', historyRouter);
+app.use('/api/admin', adminRouter);
+
+// Serve admin panel in production
+const adminPath = path.join(__dirname, '../../admin/dist');
+app.use(express.static(adminPath));
+app.get('*', (_req, res, next) => {
+  if (_req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(adminPath, 'index.html'));
+});
+
+// Error handler
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ success: false, error: 'Internal server error' });
+});
+
+app.listen(config.port, () => {
+  console.log(`Oscar API running on port ${config.port}`);
+});
+
+export default app;
