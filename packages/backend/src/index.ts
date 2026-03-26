@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { config } from './config';
+import { autoSetup, resetAndSeed } from './setup';
 import { authRouter } from './routes/auth';
 import { plantsRouter } from './routes/plants';
 import { roundsRouter } from './routes/rounds';
@@ -26,7 +27,6 @@ app.get('/api/health', (_req, res) => {
 // Setup + Reset endpoints
 app.get('/api/setup', async (_req, res) => {
   try {
-    const { autoSetup } = require('./setup');
     await autoSetup();
     res.json({ success: true, message: 'Setup complete' });
   } catch (err: any) {
@@ -36,7 +36,6 @@ app.get('/api/setup', async (_req, res) => {
 
 app.get('/api/reset-db', async (_req, res) => {
   try {
-    const { resetAndSeed } = require('./setup');
     await resetAndSeed();
     res.json({ success: true, message: 'Database reset and seeded with new roles (USER/ADMIN)' });
   } catch (err: any) {
@@ -69,8 +68,6 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   console.error('Unhandled error:', err);
   res.status(500).json({ success: false, error: 'Internal server error' });
 });
-
-import { autoSetup } from './setup';
 
 app.listen(config.port, async () => {
   console.log(`Oscar API running on port ${config.port}`);
