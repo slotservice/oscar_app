@@ -2,7 +2,7 @@
 -- Generated from Prisma schema
 
 -- Enums
-CREATE TYPE "Role" AS ENUM ('OPERATOR', 'SUPERVISOR', 'ADMIN');
+CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
 CREATE TYPE "ChecklistStatus" AS ENUM ('OK', 'ATTENTION', 'NA');
 CREATE TYPE "RoundStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED');
 CREATE TYPE "Condition" AS ENUM ('GREEN', 'YELLOW', 'RED');
@@ -14,7 +14,7 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'OPERATOR',
+    "role" "Role" NOT NULL DEFAULT 'USER',
     "active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

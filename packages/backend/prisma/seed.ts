@@ -35,7 +35,7 @@ async function main() {
       email: 'operator@oscar.app',
       name: 'John Operator',
       passwordHash: operatorPassword,
-      role: 'OPERATOR',
+      role: 'USER',
     },
   });
 

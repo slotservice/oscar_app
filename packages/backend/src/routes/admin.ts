@@ -5,7 +5,7 @@ import { authenticate, requireRole, prisma } from '../middleware/auth';
 export const adminRouter = Router();
 
 adminRouter.use(authenticate);
-adminRouter.use(requireRole('ADMIN', 'SUPERVISOR'));
+adminRouter.use(requireRole('ADMIN'));
 
 // ─── Plants ──────────────────────────────────────────────
 
@@ -405,7 +405,7 @@ adminRouter.post('/users', async (req: Request, res: Response) => {
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, name, passwordHash, role: role || 'OPERATOR' },
+      data: { email, name, passwordHash, role: role || 'USER' },
       select: { id: true, email: true, name: true, role: true, active: true },
     });
     res.status(201).json({ success: true, data: user });

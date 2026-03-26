@@ -4,7 +4,7 @@
 
 // --- Enums ---
 
-export type Role = 'OPERATOR' | 'SUPERVISOR' | 'ADMIN';
+export type Role = 'USER' | 'ADMIN';
 export type ChecklistStatus = 'OK' | 'ATTENTION' | 'NA';
 export type RoundStatus = 'IN_PROGRESS' | 'COMPLETED';
 export type Condition = 'GREEN' | 'YELLOW' | 'RED';

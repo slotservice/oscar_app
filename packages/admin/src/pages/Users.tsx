@@ -7,7 +7,7 @@ export function Users() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'OPERATOR' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER' });
 
   useEffect(() => { loadData(); }, []);
 
@@ -27,7 +27,7 @@ export function Users() {
     e.preventDefault();
     try {
       await adminApi.users.create(form);
-      setForm({ name: '', email: '', password: '', role: 'OPERATOR' });
+      setForm({ name: '', email: '', password: '', role: 'USER' });
       setShowForm(false);
       loadData();
     } catch (err: any) { alert(err.message); }
@@ -96,8 +96,7 @@ export function Users() {
           <input style={s.input} type="email" placeholder="Email *" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
           <input style={s.input} type="password" placeholder="Password *" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
           <select style={s.input} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="OPERATOR">Operator</option>
-            <option value="SUPERVISOR">Supervisor</option>
+            <option value="USER">User</option>
             <option value="ADMIN">Admin</option>
           </select>
           <button type="submit" style={s.submitBtn}>Create User</button>
@@ -112,8 +111,7 @@ export function Users() {
             <input style={s.input} placeholder="Name" value={editingUser.name} onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })} />
             <input style={s.input} placeholder="Email" value={editingUser.email} onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })} />
             <select style={s.input} value={editingUser.role} onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}>
-              <option value="OPERATOR">Operator</option>
-              <option value="SUPERVISOR">Supervisor</option>
+              <option value="USER">User</option>
               <option value="ADMIN">Admin</option>
             </select>
             <button onClick={handleSaveEdit} style={s.submitBtn}>Save</button>

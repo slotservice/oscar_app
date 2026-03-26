@@ -54,7 +54,7 @@ async function seedData(pool: Pool) {
   const adminId = adminRes.rows[0].id;
 
   const opRes = await pool.query(
-    `INSERT INTO users (id, email, name, password_hash, role) VALUES (gen_random_uuid()::text, $1, $2, $3, 'OPERATOR') RETURNING id`,
+    `INSERT INTO users (id, email, name, password_hash, role) VALUES (gen_random_uuid()::text, $1, $2, $3, 'USER') RETURNING id`,
     ['operator@oscar.app', 'John Operator', operatorHash]
   );
   const operatorId = opRes.rows[0].id;

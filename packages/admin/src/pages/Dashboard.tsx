@@ -27,7 +27,7 @@ export function Dashboard() {
 
   if (loading) return <div style={s.loading}>Loading...</div>;
 
-  const operators = users.filter((u) => u.role === 'OPERATOR');
+  const operators = users.filter((u) => u.role === 'USER');
   const activePlants = plants.filter((p) => p.active);
 
   return (

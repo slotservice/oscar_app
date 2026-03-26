@@ -11,8 +11,7 @@ datasource db {
 // ─── Enums ──────────────────────────────────────────────
 
 enum Role {
-  OPERATOR
-  SUPERVISOR
+  USER
   ADMIN
 }
 
@@ -46,7 +45,7 @@ model User {
   email        String   @unique
   name         String
   passwordHash String   @map("password_hash")
-  role         Role     @default(OPERATOR)
+  role         Role     @default(USER)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
