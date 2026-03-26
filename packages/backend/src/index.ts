@@ -23,12 +23,22 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Debug: check DB status + trigger setup
+// Setup + Reset endpoints
 app.get('/api/setup', async (_req, res) => {
   try {
     const { autoSetup } = require('./setup');
     await autoSetup();
     res.json({ success: true, message: 'Setup complete' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/reset-db', async (_req, res) => {
+  try {
+    const { resetAndSeed } = require('./setup');
+    await resetAndSeed();
+    res.json({ success: true, message: 'Database reset and seeded with new roles (USER/ADMIN)' });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

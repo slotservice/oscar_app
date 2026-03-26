@@ -4,6 +4,60 @@ import fs from 'fs';
 import path from 'path';
 
 /**
+ * Full reset: drops all tables and re-creates + re-seeds.
+ */
+export async function resetAndSeed() {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('render.com') ? { rejectUnauthorized: false } : undefined,
+  });
+
+  try {
+    console.log('[Reset] Dropping all tables...');
+    await pool.query(`
+      DROP TABLE IF EXISTS issues CASCADE;
+      DROP TABLE IF EXISTS suggestions CASCADE;
+      DROP TABLE IF EXISTS observation_entries CASCADE;
+      DROP TABLE IF EXISTS lab_entries CASCADE;
+      DROP TABLE IF EXISTS checklist_entries CASCADE;
+      DROP TABLE IF EXISTS daily_rounds CASCADE;
+      DROP TABLE IF EXISTS tag_rules CASCADE;
+      DROP TABLE IF EXISTS threshold_rules CASCADE;
+      DROP TABLE IF EXISTS observation_tags CASCADE;
+      DROP TABLE IF EXISTS lab_fields CASCADE;
+      DROP TABLE IF EXISTS checklist_items CASCADE;
+      DROP TABLE IF EXISTS checklist_sections CASCADE;
+      DROP TABLE IF EXISTS user_plants CASCADE;
+      DROP TABLE IF EXISTS plants CASCADE;
+      DROP TABLE IF EXISTS users CASCADE;
+      DROP TABLE IF EXISTS _prisma_migrations CASCADE;
+      DROP TYPE IF EXISTS "Role" CASCADE;
+      DROP TYPE IF EXISTS "ChecklistStatus" CASCADE;
+      DROP TYPE IF EXISTS "RoundStatus" CASCADE;
+      DROP TYPE IF EXISTS "Condition" CASCADE;
+      DROP TYPE IF EXISTS "Severity" CASCADE;
+    `);
+    console.log('[Reset] All tables dropped.');
+
+    // Re-create tables
+    console.log('[Reset] Creating tables...');
+    const sql = fs.readFileSync(path.join(__dirname, '../prisma/init.sql'), 'utf8');
+    await pool.query(sql);
+    console.log('[Reset] Tables created.');
+
+    // Seed data
+    console.log('[Reset] Seeding data...');
+    await seedData(pool);
+    console.log('[Reset] Complete!');
+  } catch (err) {
+    console.error('[Reset] Error:', err);
+    throw err;
+  } finally {
+    await pool.end();
+  }
+}
+
+/**
  * Auto-setup: creates tables and seeds data if database is empty.
  * Runs once on server startup. Safe to call multiple times.
  */
