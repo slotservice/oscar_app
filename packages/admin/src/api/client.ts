@@ -143,4 +143,8 @@ export const adminApi = {
     get: (roundId: string) =>
       request<{ success: boolean; data: any }>(`/history/${roundId}`),
   },
+  reports: {
+    monthly: (plantId: string, year: number, month: number) =>
+      request<{ success: boolean; data: any }>(`/reports/monthly?plantId=${plantId}&year=${year}&month=${month}`),
+  },
 };

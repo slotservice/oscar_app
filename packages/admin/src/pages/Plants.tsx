@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 export function Plants() {
+  const { theme } = useTheme();
   const [plants, setPlants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -80,6 +82,26 @@ export function Plants() {
     }
   };
 
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    title: { fontSize: 24, fontWeight: 700, color: theme.text },
+    addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
+    form: { display: 'flex', gap: 12, marginBottom: 24, padding: 16, backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}` },
+    input: { flex: 1, minWidth: 150, padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    cancelBtn: { padding: '8px 16px', backgroundColor: theme.surfaceAlt, color: theme.textSecondary, border: `1px solid ${theme.border}`, borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    editCard: { marginBottom: 20, padding: 16, backgroundColor: theme.editBg, borderRadius: 10, border: `1px solid ${theme.editBorder}` },
+    table: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, overflow: 'hidden' },
+    tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: theme.surfaceHover, borderBottom: `1px solid ${theme.border}`, fontWeight: 600, fontSize: 13, color: theme.textSecondary, textTransform: 'uppercase' },
+    tableRow: { display: 'flex', padding: '12px 16px', borderBottom: `1px solid ${theme.borderLight}`, alignItems: 'center' },
+    cell: { flex: 1, fontSize: 14, color: theme.text },
+    badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    actionBtn: { padding: '4px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 12, color: theme.textSecondary },
+    editBtn: { padding: '4px 10px', border: `1px solid ${theme.editBorder}`, borderRadius: 6, backgroundColor: theme.editBg, cursor: 'pointer', fontSize: 12, color: '#1e40af', fontWeight: 600 },
+    deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600 },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -103,7 +125,7 @@ export function Plants() {
       {/* Edit Card */}
       {editingPlant && (
         <div style={s.editCard}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Edit Plant</h3>
+          <h3 style={{ margin: '0 0 12px', fontSize: 16, color: theme.text }}>Edit Plant</h3>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <input style={s.input} placeholder="Name" value={editingPlant.name} onChange={(e) => setEditingPlant({ ...editingPlant, name: e.target.value })} />
             <input style={s.input} placeholder="Location" value={editingPlant.location || ''} onChange={(e) => setEditingPlant({ ...editingPlant, location: e.target.value })} />
@@ -125,8 +147,8 @@ export function Plants() {
         {plants.map((plant) => (
           <div key={plant.id} style={s.tableRow}>
             <span style={{ ...s.cell, flex: 2, fontWeight: 600 }}>{plant.name}</span>
-            <span style={{ ...s.cell, flex: 2, color: '#64748b' }}>{plant.location || '—'}</span>
-            <span style={{ ...s.cell, color: '#64748b' }}>{plant.plantType || '—'}</span>
+            <span style={{ ...s.cell, flex: 2, color: theme.textSecondary }}>{plant.location || '—'}</span>
+            <span style={{ ...s.cell, color: theme.textSecondary }}>{plant.plantType || '—'}</span>
             <span style={s.cell}>
               <span style={{ ...s.badge, backgroundColor: plant.active ? '#dcfce7' : '#fee2e2', color: plant.active ? '#22c55e' : '#ef4444' }}>
                 {plant.active ? 'Active' : 'Inactive'}
@@ -145,23 +167,3 @@ export function Plants() {
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 700 },
-  addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  form: { display: 'flex', gap: 12, marginBottom: 24, padding: 16, backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' },
-  input: { flex: 1, minWidth: 150, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14 },
-  submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  cancelBtn: { padding: '8px 16px', backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  editCard: { marginBottom: 20, padding: 16, backgroundColor: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe' },
-  table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' },
-  tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 13, color: '#64748b', textTransform: 'uppercase' },
-  tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
-  cell: { flex: 1, fontSize: 14 },
-  badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  actionBtn: { padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
-  editBtn: { padding: '4px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', cursor: 'pointer', fontSize: 12, color: '#1e40af', fontWeight: 600 },
-  deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600 },
-};

@@ -7,8 +7,10 @@
 export type Role = 'USER' | 'ADMIN';
 export type ChecklistStatus = 'OK' | 'ATTENTION' | 'NA';
 export type RoundStatus = 'IN_PROGRESS' | 'COMPLETED';
-export type Condition = 'GREEN' | 'YELLOW' | 'RED';
+export type Condition = 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED';
 export type Severity = 'GREEN' | 'CAUTION' | 'CRITICAL';
+export type OperatorLevel = 'VETERAN' | 'EXPERIENCED' | 'TRAINEE';
+export type StatusBand = 'Stable' | 'Slight Drift' | 'Moderate Concern' | 'High Risk';
 
 // --- User ---
 
@@ -17,6 +19,7 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  operatorLevel: OperatorLevel;
   active: boolean;
 }
 
@@ -47,7 +50,7 @@ export interface ChecklistSection {
   name: string;
   displayOrder: number;
   active: boolean;
-  items: ChecklistItem[];
+  items?: ChecklistItem[];
 }
 
 export interface ChecklistItem {
@@ -57,6 +60,7 @@ export interface ChecklistItem {
   description: string | null;
   displayOrder: number;
   requiresNoteOnAttention: boolean;
+  minimumLevel: OperatorLevel;
   active: boolean;
 }
 
@@ -71,16 +75,20 @@ export interface ChecklistEntry {
 }
 
 export interface ChecklistSectionWithEntries extends ChecklistSection {
-  items: (ChecklistItem & { entry?: ChecklistEntry })[];
+  items: Array<ChecklistItem & { entry: ChecklistEntry | null }>;
+  completed: number;
+  total: number;
 }
 
-// --- Lab ---
+// --- Lab Data ---
 
 export interface LabField {
   id: string;
   name: string;
   unit: string;
   displayOrder: number;
+  isRequired: boolean;
+  recommendedFrequency: string;
 }
 
 export interface LabEntry {
@@ -92,7 +100,7 @@ export interface LabEntry {
 }
 
 export interface LabFieldWithEntry extends LabField {
-  entry?: LabEntry;
+  entry: LabEntry | null;
 }
 
 // --- Observations ---
@@ -149,6 +157,14 @@ export interface Suggestion {
   severity: Severity;
   acknowledged: boolean;
   timestamp: string;
+  // OSCAR Logic Matrix fields
+  ruleId?: string;
+  category?: string;
+  title?: string;
+  severityLevel?: number;
+  deduction?: number;
+  confidence?: string;
+  supportingFields?: string[];
 }
 
 // --- Issues ---
@@ -176,6 +192,13 @@ export interface DailyRound {
   status: RoundStatus;
   overallCondition: Condition | null;
   notes: string | null;
+  // Stability Index
+  stabilityScore: number | null;
+  displayScore: number | null;
+  statusBand: StatusBand | null;
+  confidenceLevel: string | null;
+  primaryConcern: string | null;
+  scoreBreakdown: any | null;
 }
 
 export interface DailyRoundFull extends DailyRound {
@@ -199,15 +222,18 @@ export interface ApiResponse<T> {
 // --- Constants ---
 
 export const DEFAULT_LAB_FIELDS = [
-  { name: 'Flow', unit: 'MGD' },
-  { name: 'DO', unit: 'mg/L' },
-  { name: 'pH', unit: 'SU' },
-  { name: 'Temperature', unit: '°F' },
-  { name: 'MLSS', unit: 'mg/L' },
-  { name: 'RAS', unit: 'mg/L' },
-  { name: 'WAS', unit: 'gal' },
-  { name: 'Ammonia', unit: 'mg/L' },
-  { name: 'Settlometer', unit: 'mL/L' },
+  { name: 'Influent Flow', unit: 'MGD', isRequired: true },
+  { name: 'MLSS', unit: 'mg/L', isRequired: true },
+  { name: 'DO', unit: 'mg/L', isRequired: true },
+  { name: 'Temperature', unit: '°F', isRequired: true },
+  { name: 'RAS Rate', unit: 'GPM', isRequired: true },
+  { name: 'RAS Concentration', unit: 'mg/L', isRequired: true },
+  { name: 'WAS Rate', unit: 'gal', isRequired: true },
+  { name: 'Blanket Depth', unit: 'ft', isRequired: true },
+  { name: 'pH', unit: 'SU', isRequired: false },
+  { name: 'Ammonia', unit: 'mg/L', isRequired: false },
+  { name: 'Settleability', unit: 'mL/L', isRequired: false },
+  { name: 'WAS Concentration', unit: 'mg/L', isRequired: false },
 ] as const;
 
 export const DEFAULT_SECTIONS = [
@@ -215,30 +241,46 @@ export const DEFAULT_SECTIONS = [
   'Mechanical Equipment',
   'Process Observations',
   'Housekeeping',
-  'Labs & Operating Data',
 ] as const;
 
 export const DEFAULT_OBSERVATION_TAGS = [
-  { name: 'Cloudy clarifier', category: 'Clarifier' },
+  { name: 'Foam increase', category: 'Process' },
+  { name: 'Pin floc observed', category: 'Process' },
+  { name: 'Cloudy effluent', category: 'Clarifier' },
+  { name: 'Septic odor', category: 'Process' },
+  { name: 'Dark sludge', category: 'Process' },
+  { name: 'Poor visible settling', category: 'Clarifier' },
+  { name: 'Unusual flow condition', category: 'Hydraulic' },
+  { name: 'Equipment issue', category: 'Mechanical' },
+  { name: 'Other concern', category: 'General' },
   { name: 'Solids carryover', category: 'Clarifier' },
-  { name: 'Excess foam', category: 'Aeration' },
-  { name: 'Septic odor', category: 'General' },
-  { name: 'Light basin', category: 'Aeration' },
-  { name: 'Dark basin', category: 'Aeration' },
   { name: 'Floating sludge', category: 'Clarifier' },
-  { name: 'Grease buildup', category: 'General' },
-  { name: 'Unusual color', category: 'General' },
-  { name: 'Equipment noise', category: 'Mechanical' },
 ] as const;
 
 export const CONDITION_LABELS: Record<Condition, string> = {
-  GREEN: 'All Good',
-  YELLOW: 'Caution',
-  RED: 'Critical',
+  GREEN: 'Stable',
+  YELLOW: 'Slight Drift',
+  ORANGE: 'Moderate Concern',
+  RED: 'High Risk',
 };
 
 export const CONDITION_COLORS: Record<Condition, string> = {
   GREEN: '#22C55E',
   YELLOW: '#EAB308',
+  ORANGE: '#F97316',
   RED: '#EF4444',
+};
+
+export const SEVERITY_LEVEL_LABELS: Record<number, string> = {
+  1: 'Stable',
+  2: 'Slight Drift',
+  3: 'Moderate Concern',
+  4: 'High Risk',
+};
+
+export const SEVERITY_LEVEL_COLORS: Record<number, string> = {
+  1: '#22C55E',
+  2: '#EAB308',
+  3: '#F97316',
+  4: '#EF4444',
 };

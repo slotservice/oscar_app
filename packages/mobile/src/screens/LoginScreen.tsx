@@ -3,12 +3,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { api, setAuthToken } from '../api/client';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { useAppTheme, spacing, fontSize, borderRadius } from '../theme';
 import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
+  const { colors } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,7 @@ export function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       const result = await api.auth.login(email.trim(), password);
-      setAuthToken(result.data.token);
+      await setAuthToken(result.data.token);
       navigation.replace('PlantSelect');
     } catch (err: any) {
       showAlert('Login Failed', err.message || 'Invalid credentials');
@@ -30,6 +31,62 @@ export function LoginScreen({ navigation }: Props) {
       setLoading(false);
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.primary,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xl,
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: spacing.xxl,
+    },
+    logo: {
+      fontSize: 56,
+      fontWeight: '800',
+      color: colors.textWhite,
+      letterSpacing: 6,
+    },
+    tagline: {
+      fontSize: fontSize.lg,
+      color: colors.textWhite,
+      opacity: 0.8,
+      marginTop: spacing.xs,
+    },
+    form: {
+      gap: spacing.md,
+    },
+    input: {
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      fontSize: fontSize.lg,
+      color: colors.textWhite,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+    },
+    button: {
+      backgroundColor: colors.textWhite,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md + 2,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: colors.primary,
+      fontSize: fontSize.lg,
+      fontWeight: '700',
+    },
+  });
 
   return (
     <KeyboardAvoidingView
@@ -46,7 +103,7 @@ export function LoginScreen({ navigation }: Props) {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor={colors.textLight}
+            placeholderTextColor="rgba(255,255,255,0.5)"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -56,7 +113,7 @@ export function LoginScreen({ navigation }: Props) {
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor={colors.textLight}
+            placeholderTextColor="rgba(255,255,255,0.5)"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -75,59 +132,3 @@ export function LoginScreen({ navigation }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.primary,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  logo: {
-    fontSize: 56,
-    fontWeight: '800',
-    color: colors.textWhite,
-    letterSpacing: 6,
-  },
-  tagline: {
-    fontSize: fontSize.lg,
-    color: colors.textWhite,
-    opacity: 0.8,
-    marginTop: spacing.xs,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.lg,
-    color: colors.textWhite,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  button: {
-    backgroundColor: colors.textWhite,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md + 2,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.primary,
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-  },
-});

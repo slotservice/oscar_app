@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 export function ObservationTags() {
+  const { theme } = useTheme();
   const [plants, setPlants] = useState<any[]>([]);
   const [selectedPlant, setSelectedPlant] = useState('');
   const [tags, setTags] = useState<any[]>([]);
@@ -174,6 +176,32 @@ export function ObservationTags() {
     } catch (err: any) { alert(err.message); }
   };
 
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+    title: { fontSize: 24, fontWeight: 700, color: theme.text },
+    select: { padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    sectionTitle: { fontSize: 18, fontWeight: 600, margin: 0, color: theme.text },
+    addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+    form: { display: 'flex', gap: 12, marginBottom: 16, padding: 16, backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, flexWrap: 'wrap' },
+    input: { flex: 1, minWidth: 140, padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    table: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, overflow: 'hidden', marginBottom: 8 },
+    tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: theme.surfaceHover, borderBottom: `1px solid ${theme.border}`, fontWeight: 600, fontSize: 12, color: theme.textSecondary, textTransform: 'uppercase' },
+    tableRow: { display: 'flex', padding: '12px 16px', borderBottom: `1px solid ${theme.borderLight}`, alignItems: 'center' },
+    cell: { flex: 1, fontSize: 13, color: theme.text },
+    badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    severityBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    actionBtn: { padding: '3px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 12, color: theme.textSecondary },
+    editBtn: { padding: '3px 10px', border: `1px solid ${theme.editBorder}`, borderRadius: 6, backgroundColor: theme.editBg, color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    saveBtn: { padding: '3px 10px', border: '1px solid #bbf7d0', borderRadius: 6, backgroundColor: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    cancelBtn: { padding: '3px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, color: theme.textSecondary, fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    inlineInput: { width: '100%', padding: '4px 8px', border: `1px solid ${theme.border}`, borderRadius: 4, fontSize: 13, backgroundColor: theme.inputBg, color: theme.text },
+    empty: { textAlign: 'center', padding: 24, color: theme.textTertiary, fontSize: 14 },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -241,7 +269,7 @@ export function ObservationTags() {
             ) : (
               <>
                 <span style={{ ...s.cell, flex: 2, fontWeight: 600 }}>{tag.name}</span>
-                <span style={{ ...s.cell, color: '#64748b' }}>{tag.category || '—'}</span>
+                <span style={{ ...s.cell, color: theme.textSecondary }}>{tag.category || '—'}</span>
                 <span style={s.cell}>
                   <span style={{ ...s.badge, backgroundColor: tag.active ? '#dcfce7' : '#fee2e2', color: tag.active ? '#22c55e' : '#ef4444' }}>
                     {tag.active ? 'Active' : 'Disabled'}
@@ -328,7 +356,7 @@ export function ObservationTags() {
             ) : (
               <>
                 <span style={{ ...s.cell, flex: 1.5, fontWeight: 600 }}>{rule.tag?.name || '—'}</span>
-                <span style={{ ...s.cell, flex: 2, fontSize: 13, color: '#64748b' }}>{rule.suggestionText}</span>
+                <span style={{ ...s.cell, flex: 2, fontSize: 13, color: theme.textSecondary }}>{rule.suggestionText}</span>
                 <span style={s.cell}>
                   <span style={{ ...s.severityBadge, backgroundColor: rule.severity === 'CRITICAL' ? '#fee2e2' : '#fef9c3', color: rule.severity === 'CRITICAL' ? '#ef4444' : '#eab308' }}>
                     {rule.severity}
@@ -355,29 +383,3 @@ export function ObservationTags() {
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 700 },
-  select: { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
-  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: 600, margin: 0 },
-  addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  form: { display: 'flex', gap: 12, marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', flexWrap: 'wrap' },
-  input: { flex: 1, minWidth: 140, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14 },
-  submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 8 },
-  tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 12, color: '#64748b', textTransform: 'uppercase' },
-  tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
-  cell: { flex: 1, fontSize: 13 },
-  badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  severityBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  actionBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
-  editBtn: { padding: '3px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  saveBtn: { padding: '3px 10px', border: '1px solid #bbf7d0', borderRadius: 6, backgroundColor: '#f0fdf4', color: '#16a34a', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  cancelBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', color: '#64748b', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  inlineInput: { width: '100%', padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 13 },
-  empty: { textAlign: 'center', padding: 24, color: '#94a3b8', fontSize: 14 },
-};

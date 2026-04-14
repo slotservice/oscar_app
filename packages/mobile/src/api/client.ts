@@ -1,10 +1,38 @@
-// Cloud backend URL
-const API_BASE = 'https://oscar-app-3qkb.onrender.com/api';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
+// Backend API URL
+// Local development: http://localhost:3000/api
+// AWS production:    https://your-api-domain.com/api
+const API_BASE = 'http://localhost:3000/api';
+
+const TOKEN_KEY = 'oscar_auth_token';
 let authToken: string | null = null;
 
-export function setAuthToken(token: string | null) {
+export async function setAuthToken(token: string | null) {
   authToken = token;
+  if (Platform.OS === 'web') {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  } else {
+    if (token) {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    }
+  }
+}
+
+export async function loadStoredToken(): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    authToken = localStorage.getItem(TOKEN_KEY);
+  } else {
+    authToken = await SecureStore.getItemAsync(TOKEN_KEY);
+  }
+  return authToken;
 }
 
 export function getAuthToken(): string | null {
@@ -150,5 +178,11 @@ export const api = {
       request<{ success: boolean; data: { rounds: any[]; pagination: any } }>(`/history?plantId=${plantId}&page=${page}`),
     get: (roundId: string) =>
       request<{ success: boolean; data: any }>(`/history/${roundId}`),
+  },
+
+  // ─── Reports ────────────────────────────────────────
+  reports: {
+    monthly: (plantId: string, year: number, month: number) =>
+      request<{ success: boolean; data: any }>(`/reports/monthly?plantId=${plantId}&year=${year}&month=${month}`),
   },
 };

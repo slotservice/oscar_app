@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 const conditionStyles: Record<string, { bg: string; color: string; label: string }> = {
-  GREEN: { bg: '#dcfce7', color: '#22c55e', label: 'All Good' },
-  YELLOW: { bg: '#fef9c3', color: '#eab308', label: 'Caution' },
-  RED: { bg: '#fee2e2', color: '#ef4444', label: 'Critical' },
+  GREEN: { bg: '#dcfce7', color: '#22c55e', label: 'Stable' },
+  YELLOW: { bg: '#fef9c3', color: '#eab308', label: 'Slight Drift' },
+  ORANGE: { bg: '#fff7ed', color: '#f97316', label: 'Moderate Concern' },
+  RED: { bg: '#fee2e2', color: '#ef4444', label: 'High Risk' },
 };
 
 export function RoundHistory() {
+  const { theme } = useTheme();
   const [plants, setPlants] = useState<any[]>([]);
   const [selectedPlant, setSelectedPlant] = useState('');
   const [rounds, setRounds] = useState<any[]>([]);
@@ -15,6 +18,10 @@ export function RoundHistory() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
   const [selectedRound, setSelectedRound] = useState<any>(null);
+  const [showReport, setShowReport] = useState(false);
+  const [report, setReport] = useState<any>(null);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
 
   useEffect(() => {
     loadPlants();
@@ -56,6 +63,46 @@ export function RoundHistory() {
     }
   };
 
+  const loadReport = async () => {
+    try {
+      const result = await adminApi.reports.monthly(selectedPlant, reportYear, reportMonth);
+      setReport(result.data);
+      setShowReport(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    title: { fontSize: 24, fontWeight: 700, color: theme.text },
+    plantSelect: { padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    backBtn: { padding: '6px 12px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 13, color: theme.textSecondary, marginBottom: 16 },
+    table: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, overflow: 'hidden' },
+    tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: theme.surfaceHover, borderBottom: `1px solid ${theme.border}`, fontWeight: 600, fontSize: 12, color: theme.textSecondary, textTransform: 'uppercase' },
+    tableRow: { display: 'flex', padding: '12px 16px', borderBottom: `1px solid ${theme.borderLight}`, alignItems: 'center' },
+    cell: { flex: 1, fontSize: 13, color: theme.text },
+    statusBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    condBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    viewBtn: { padding: '4px 10px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
+    pagination: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 20 },
+    pageBtn: { padding: '6px 14px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 13, color: theme.text },
+    pageInfo: { fontSize: 13, color: theme.textSecondary },
+    // Detail view
+    detailGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 },
+    detailCard: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, padding: 20 },
+    cardTitle: { fontSize: 16, fontWeight: 600, marginBottom: 12, margin: 0, paddingBottom: 8, borderBottom: `1px solid ${theme.borderLight}`, color: theme.text },
+    labRow: { display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${theme.surfaceHover}`, fontSize: 14, color: theme.text },
+    sugRow: { padding: '8px 12px', borderLeft: '3px solid', marginBottom: 8, borderRadius: '0 6px 6px 0', backgroundColor: theme.surfaceHover },
+    sugMessage: { fontSize: 13, lineHeight: '1.4', color: theme.text },
+    sugMeta: { fontSize: 11, color: theme.textTertiary, marginTop: 4 },
+    issueRow: { padding: '8px 0', borderBottom: `1px solid ${theme.surfaceHover}` },
+    issueDesc: { fontSize: 14, fontWeight: 500, color: theme.text },
+    issueAction: { fontSize: 13, color: theme.textSecondary, marginTop: 2 },
+    emptyText: { color: theme.textTertiary, fontSize: 13 },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   // Detail view
@@ -82,6 +129,33 @@ export function RoundHistory() {
             )}
             {selectedRound.notes && <p><strong>Notes:</strong> {selectedRound.notes}</p>}
           </div>
+
+          {/* Stability Index */}
+          {selectedRound.displayScore != null && (
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Stability Index</h3>
+              <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 48, fontWeight: 800, color: selectedRound.displayScore >= 85 ? '#22c55e' : selectedRound.displayScore >= 70 ? '#eab308' : selectedRound.displayScore >= 50 ? '#f97316' : '#ef4444' }}>
+                  {selectedRound.displayScore}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>{selectedRound.statusBand || '—'}</div>
+                <div style={{ fontSize: 12, color: theme.textTertiary, marginTop: 4 }}>Confidence: {selectedRound.confidenceLevel || '—'}</div>
+              </div>
+              {selectedRound.primaryConcern && selectedRound.primaryConcern !== 'Plant operating normally.' && (
+                <p style={{ fontSize: 13, color: theme.textSecondary, textAlign: 'center' }}>{selectedRound.primaryConcern}</p>
+              )}
+              {selectedRound.scoreBreakdown && (
+                <div style={{ marginTop: 12 }}>
+                  {(Array.isArray(selectedRound.scoreBreakdown) ? selectedRound.scoreBreakdown : []).map((cat: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 13, color: theme.text }}>
+                      <span>{cat.category}</span>
+                      <span style={{ fontWeight: 600 }}>{cat.score}/{cat.maxPoints}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={s.detailCard}>
             <h3 style={s.cardTitle}>Lab Values</h3>
@@ -126,16 +200,86 @@ export function RoundHistory() {
     );
   }
 
+  // Monthly report view
+  if (showReport && report) {
+    const monthName = new Date(reportYear, reportMonth - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const getColor = (score: number) => score >= 85 ? '#22c55e' : score >= 70 ? '#eab308' : score >= 50 ? '#f97316' : '#ef4444';
+    return (
+      <div>
+        <button onClick={() => { setShowReport(false); setReport(null); }} style={s.backBtn}>Back to History</button>
+        <h2 style={s.title}>Monthly Report — {monthName}</h2>
+        {report.totalRounds === 0 ? (
+          <p style={s.emptyText}>No completed rounds for this period.</p>
+        ) : (
+          <div style={s.detailGrid}>
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Stability Overview</h3>
+              {report.stabilityOverview.avgScore != null && (
+                <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 48, fontWeight: 800, color: getColor(report.stabilityOverview.avgScore) }}>{report.stabilityOverview.avgScore}</div>
+                  <div style={{ fontSize: 14, color: theme.textSecondary }}>Monthly Average</div>
+                </div>
+              )}
+              <div style={s.labRow}><span>Rounds Completed</span><strong>{report.totalRounds} / {report.daysInMonth} ({report.completionRate}%)</strong></div>
+              <div style={s.labRow}><span>Score Range</span><strong>{report.stabilityOverview.minScore} — {report.stabilityOverview.maxScore}</strong></div>
+              <div style={s.labRow}><span>Trend</span><strong style={{ color: report.stabilityOverview.trend === 'improving' ? '#22c55e' : report.stabilityOverview.trend === 'declining' ? '#ef4444' : theme.textSecondary }}>{report.stabilityOverview.trend}</strong></div>
+            </div>
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Category Averages</h3>
+              {(report.categoryAverages || []).map((cat: any, i: number) => (
+                <div key={i} style={s.labRow}><span>{cat.category}</span><strong>{cat.avgScore} / {cat.maxPoints}</strong></div>
+              ))}
+            </div>
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Lab Value Averages</h3>
+              {(report.labAverages || []).map((lab: any, i: number) => (
+                <div key={i} style={s.labRow}><span>{lab.name} ({lab.unit})</span><strong>{lab.avg} ({lab.min}–{lab.max})</strong></div>
+              ))}
+            </div>
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Top Suggestions</h3>
+              {(report.topSuggestions || []).map((sug: any, i: number) => (
+                <div key={i} style={s.sugRow}><div style={s.sugMessage}>{sug.ruleId}</div><div style={s.sugMeta}>{sug.occurrences} occurrences · {sug.category}</div></div>
+              ))}
+              {(!report.topSuggestions || report.topSuggestions.length === 0) && <p style={s.emptyText}>No suggestions this month</p>}
+            </div>
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Issues Summary</h3>
+              <div style={s.labRow}><span>Total Issues</span><strong>{report.issuesSummary?.total || 0}</strong></div>
+              <div style={s.labRow}><span>Resolved</span><strong>{report.issuesSummary?.resolved || 0}</strong></div>
+              <div style={s.labRow}><span>Supervisor Flagged</span><strong>{report.issuesSummary?.supervisorFlagged || 0}</strong></div>
+            </div>
+            <div style={s.detailCard}>
+              <h3 style={s.cardTitle}>Recommendations</h3>
+              {(report.recommendations || []).map((rec: string, i: number) => (
+                <p key={i} style={{ fontSize: 13, color: theme.text, lineHeight: '1.5', margin: '4px 0' }}>• {rec}</p>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // List view
   return (
     <div>
       <div style={s.header}>
         <h2 style={s.title}>Round History</h2>
-        <select style={s.plantSelect} value={selectedPlant} onChange={(e) => setSelectedPlant(e.target.value)}>
-          {plants.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <select style={s.plantSelect} value={selectedPlant} onChange={(e) => setSelectedPlant(e.target.value)}>
+            {plants.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <select style={s.plantSelect} value={`${reportYear}-${reportMonth}`} onChange={(e) => { const [y, m] = e.target.value.split('-'); setReportYear(parseInt(y)); setReportMonth(parseInt(m)); }}>
+            {Array.from({ length: 12 }, (_, i) => {
+              const d = new Date(); d.setMonth(d.getMonth() - i);
+              return <option key={i} value={`${d.getFullYear()}-${d.getMonth() + 1}`}>{d.toLocaleString('en-US', { month: 'short', year: 'numeric' })}</option>;
+            })}
+          </select>
+          <button onClick={loadReport} style={s.viewBtn}>Monthly Report</button>
+        </div>
       </div>
 
       <div style={s.table}>
@@ -166,8 +310,8 @@ export function RoundHistory() {
                 </span>
               ) : '—'}
             </span>
-            <span style={{ ...s.cell, color: '#64748b' }}>{round._count?.checklistEntries || 0}</span>
-            <span style={{ ...s.cell, color: '#64748b' }}>{round._count?.suggestions || 0}</span>
+            <span style={{ ...s.cell, color: theme.textSecondary }}>{round._count?.checklistEntries || 0}</span>
+            <span style={{ ...s.cell, color: theme.textSecondary }}>{round._count?.suggestions || 0}</span>
             <span style={s.cell}>
               <button onClick={() => viewRound(round.id)} style={s.viewBtn}>View</button>
             </span>
@@ -185,33 +329,3 @@ export function RoundHistory() {
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 700 },
-  plantSelect: { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
-  backBtn: { padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 13, color: '#64748b', marginBottom: 16 },
-  table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' },
-  tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 12, color: '#64748b', textTransform: 'uppercase' },
-  tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
-  cell: { flex: 1, fontSize: 13 },
-  statusBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  condBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  viewBtn: { padding: '4px 10px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
-  pagination: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 20 },
-  pageBtn: { padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 13 },
-  pageInfo: { fontSize: 13, color: '#64748b' },
-  // Detail view
-  detailGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 },
-  detailCard: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', padding: 20 },
-  cardTitle: { fontSize: 16, fontWeight: 600, marginBottom: 12, margin: 0, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' },
-  labRow: { display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f8fafc', fontSize: 14 },
-  sugRow: { padding: '8px 12px', borderLeft: '3px solid', marginBottom: 8, borderRadius: '0 6px 6px 0', backgroundColor: '#f8fafc' },
-  sugMessage: { fontSize: 13, lineHeight: '1.4' },
-  sugMeta: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
-  issueRow: { padding: '8px 0', borderBottom: '1px solid #f8fafc' },
-  issueDesc: { fontSize: 14, fontWeight: 500 },
-  issueAction: { fontSize: 13, color: '#64748b', marginTop: 2 },
-  emptyText: { color: '#94a3b8', fontSize: 13 },
-};

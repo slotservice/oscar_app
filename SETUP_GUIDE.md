@@ -49,7 +49,7 @@ CREATE DATABASE oscar_dev;
 Copy the example env file:
 
 ```bash
-cd c:\Spider\Project\Shad\Project\packages\backend
+cd packages/backend
 copy .env.example .env
 ```
 
@@ -67,7 +67,7 @@ Replace `YOUR_PASSWORD_HERE` with the PostgreSQL password you set during install
 
 ## Step 3: Install Dependencies
 
-Open a terminal at the project root (`c:\Spider\Project\Shad\Project`):
+Open a terminal at the project root (`oscar-app`):
 
 ```bash
 # Install backend + admin + shared packages

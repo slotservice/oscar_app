@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 export function Dashboard() {
+  const { theme } = useTheme();
   const [plants, setPlants] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,22 @@ export function Dashboard() {
     }
   };
 
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    title: { fontSize: 24, fontWeight: 700, marginBottom: 24, color: theme.text },
+    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 },
+    statCard: { backgroundColor: theme.surface, borderRadius: 10, padding: 20, border: `1px solid ${theme.border}`, textAlign: 'center' },
+    statValue: { fontSize: 36, fontWeight: 800 },
+    statLabel: { fontSize: 13, color: theme.textSecondary, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1 },
+    sections: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 },
+    section: { backgroundColor: theme.surface, borderRadius: 10, padding: 20, border: `1px solid ${theme.border}` },
+    sectionTitle: { fontSize: 16, fontWeight: 600, marginBottom: 16, color: theme.text },
+    listItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: `1px solid ${theme.borderLight}` },
+    itemName: { fontWeight: 600, fontSize: 14, flex: 1, color: theme.text },
+    itemSub: { fontSize: 13, color: theme.textSecondary },
+    badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, textTransform: 'uppercase' },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   const operators = users.filter((u) => u.role === 'USER');
@@ -35,10 +53,10 @@ export function Dashboard() {
       <h2 style={s.title}>Dashboard</h2>
 
       <div style={s.statsGrid}>
-        <StatCard label="Active Plants" value={activePlants.length} color="#22c55e" />
-        <StatCard label="Total Users" value={users.length} color="#3b82f6" />
-        <StatCard label="Operators" value={operators.length} color="#8b5cf6" />
-        <StatCard label="Total Plants" value={plants.length} color="#f59e0b" />
+        <StatCard label="Active Plants" value={activePlants.length} color="#22c55e" s={s} />
+        <StatCard label="Total Users" value={users.length} color="#3b82f6" s={s} />
+        <StatCard label="Operators" value={operators.length} color="#8b5cf6" s={s} />
+        <StatCard label="Total Plants" value={plants.length} color="#f59e0b" s={s} />
       </div>
 
       <div style={s.sections}>
@@ -72,7 +90,7 @@ export function Dashboard() {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+function StatCard({ label, value, color, s }: { label: string; value: number; color: string; s: Record<string, React.CSSProperties> }) {
   return (
     <div style={s.statCard}>
       <div style={{ ...s.statValue, color }}>{value}</div>
@@ -80,19 +98,3 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  title: { fontSize: 24, fontWeight: 700, marginBottom: 24 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 },
-  statCard: { backgroundColor: '#fff', borderRadius: 10, padding: 20, border: '1px solid #e2e8f0', textAlign: 'center' },
-  statValue: { fontSize: 36, fontWeight: 800 },
-  statLabel: { fontSize: 13, color: '#64748b', marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1 },
-  sections: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 },
-  section: { backgroundColor: '#fff', borderRadius: 10, padding: 20, border: '1px solid #e2e8f0' },
-  sectionTitle: { fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#1e293b' },
-  listItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid #f1f5f9' },
-  itemName: { fontWeight: 600, fontSize: 14, flex: 1 },
-  itemSub: { fontSize: 13, color: '#64748b' },
-  badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, textTransform: 'uppercase' },
-};

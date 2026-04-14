@@ -138,10 +138,17 @@ adminRouter.post('/sections/:sectionId/items', async (req: Request, res: Respons
 
 adminRouter.put('/items/:id', async (req: Request, res: Response) => {
   try {
-    const { name, description, displayOrder, requiresNoteOnAttention, active } = req.body;
+    const { name, description, displayOrder, requiresNoteOnAttention, minimumLevel, active } = req.body;
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+    if (requiresNoteOnAttention !== undefined) updateData.requiresNoteOnAttention = requiresNoteOnAttention;
+    if (minimumLevel !== undefined) updateData.minimumLevel = minimumLevel;
+    if (active !== undefined) updateData.active = active;
     const item = await prisma.checklistItem.update({
       where: { id: req.params.id },
-      data: { name, description, displayOrder, requiresNoteOnAttention, active },
+      data: updateData,
     });
     res.json({ success: true, data: item });
   } catch (err) {
@@ -386,7 +393,7 @@ adminRouter.delete('/tag-rules/:id', async (req: Request, res: Response) => {
 adminRouter.get('/users', async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, active: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, operatorLevel: true, active: true, createdAt: true },
       orderBy: { name: 'asc' },
     });
     res.json({ success: true, data: users });
@@ -398,15 +405,15 @@ adminRouter.get('/users', async (_req: Request, res: Response) => {
 
 adminRouter.post('/users', async (req: Request, res: Response) => {
   try {
-    const { email, name, password, role } = req.body;
+    const { email, name, password, role, operatorLevel } = req.body;
     if (!email || !name || !password) {
       res.status(400).json({ success: false, error: 'Email, name, and password required' });
       return;
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, name, passwordHash, role: role || 'USER' },
-      select: { id: true, email: true, name: true, role: true, active: true },
+      data: { email, name, passwordHash, role: role || 'USER', operatorLevel: operatorLevel || 'TRAINEE' },
+      select: { id: true, email: true, name: true, role: true, operatorLevel: true, active: true },
     });
     res.status(201).json({ success: true, data: user });
   } catch (err) {
@@ -417,17 +424,18 @@ adminRouter.post('/users', async (req: Request, res: Response) => {
 
 adminRouter.put('/users/:id', async (req: Request, res: Response) => {
   try {
-    const { name, email, role, active } = req.body;
+    const { name, email, role, active, operatorLevel } = req.body;
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (role !== undefined) updateData.role = role;
     if (active !== undefined) updateData.active = active;
+    if (operatorLevel !== undefined) updateData.operatorLevel = operatorLevel;
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
       data: updateData,
-      select: { id: true, email: true, name: true, role: true, active: true },
+      select: { id: true, email: true, name: true, role: true, operatorLevel: true, active: true },
     });
     res.json({ success: true, data: user });
   } catch (err) {

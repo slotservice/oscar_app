@@ -13,6 +13,7 @@ import { suggestionsRouter } from './routes/suggestions';
 import { issuesRouter } from './routes/issues';
 import { historyRouter } from './routes/history';
 import { adminRouter } from './routes/admin';
+import { reportsRouter } from './routes/reports';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/rounds', suggestionsRouter);
 app.use('/api/rounds', issuesRouter);
 app.use('/api/history', historyRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/reports', reportsRouter);
 
 // Serve admin panel in production
 const adminPath = path.join(__dirname, '../../admin/dist');

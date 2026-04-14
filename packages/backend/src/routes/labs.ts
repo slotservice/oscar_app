@@ -34,6 +34,8 @@ labsRouter.get('/:roundId/labs', async (req: Request, res: Response) => {
       name: field.name,
       unit: field.unit,
       displayOrder: field.displayOrder,
+      isRequired: field.isRequired,
+      recommendedFrequency: field.recommendedFrequency,
       entry: field.entries[0] || null,
     }));
 

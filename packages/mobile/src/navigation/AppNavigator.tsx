@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { colors } from '../theme';
-import { getAuthToken } from '../api/client';
+import { useAppTheme } from '../theme';
+import { loadStoredToken, setAuthToken, api } from '../api/client';
 
 // Screens
 import { LoginScreen } from '../screens/LoginScreen';
@@ -15,6 +16,7 @@ import { SuggestionsScreen } from '../screens/SuggestionsScreen';
 import { IssuesScreen } from '../screens/IssuesScreen';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
+import { MonthlyReportScreen } from '../screens/MonthlyReportScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -28,20 +30,49 @@ export type RootStackParamList = {
   Issues: { roundId: string };
   Summary: { roundId: string };
   History: { plantId: string; plantName: string };
+  MonthlyReport: { plantId: string; plantName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const headerStyle = {
-  headerStyle: { backgroundColor: colors.primary },
-  headerTintColor: colors.textWhite,
-  headerTitleStyle: { fontWeight: '600' as const },
-};
-
 export function AppNavigator() {
+  const { colors } = useAppTheme();
+  const [checking, setChecking] = useState(true);
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await loadStoredToken();
+        if (token) {
+          await api.auth.me();
+          setInitialRoute('PlantSelect');
+        }
+      } catch {
+        await setAuthToken(null);
+      } finally {
+        setChecking(false);
+      }
+    })();
+  }, []);
+
+  if (checking) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  const headerStyle = {
+    headerStyle: { backgroundColor: colors.primary },
+    headerTintColor: colors.textWhite,
+    headerTitleStyle: { fontWeight: '600' as const },
+  };
+
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName={initialRoute}
       screenOptions={{
         ...headerStyle,
         headerBackTitleVisible: false,
@@ -101,6 +132,11 @@ export function AppNavigator() {
         name="History"
         component={HistoryScreen}
         options={{ title: 'Round History' }}
+      />
+      <Stack.Screen
+        name="MonthlyReport"
+        component={MonthlyReportScreen}
+        options={{ title: 'Monthly Report' }}
       />
     </Stack.Navigator>
   );

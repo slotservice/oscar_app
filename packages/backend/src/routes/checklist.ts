@@ -6,6 +6,7 @@ export const checklistRouter = Router();
 checklistRouter.use(authenticate);
 
 // GET /api/rounds/:roundId/checklist — sections + items + entries
+// Filters items by operator level: VETERAN sees fewest, TRAINEE sees all
 checklistRouter.get('/:roundId/checklist', async (req: Request, res: Response) => {
   try {
     const round = await prisma.dailyRound.findUnique({
@@ -18,12 +19,28 @@ checklistRouter.get('/:roundId/checklist', async (req: Request, res: Response) =
       return;
     }
 
+    // Get operator level for filtering
+    const user = await prisma.user.findUnique({
+      where: { id: (req as any).user.userId },
+      select: { operatorLevel: true },
+    });
+    const level = user?.operatorLevel || 'TRAINEE';
+
+    // Level hierarchy: TRAINEE sees all, EXPERIENCED sees EXPERIENCED+VETERAN, VETERAN sees VETERAN only
+    const levelFilter: string[] = [];
+    if (level === 'TRAINEE') levelFilter.push('TRAINEE', 'EXPERIENCED', 'VETERAN');
+    else if (level === 'EXPERIENCED') levelFilter.push('EXPERIENCED', 'VETERAN');
+    else levelFilter.push('VETERAN');
+
     const sections = await prisma.checklistSection.findMany({
       where: { plantId: round.plantId, active: true },
       orderBy: { displayOrder: 'asc' },
       include: {
         items: {
-          where: { active: true },
+          where: {
+            active: true,
+            minimumLevel: { in: levelFilter as any },
+          },
           orderBy: { displayOrder: 'asc' },
           include: {
             entries: {
@@ -36,22 +53,24 @@ checklistRouter.get('/:roundId/checklist', async (req: Request, res: Response) =
     });
 
     // Flatten entries for easier consumption
-    const result = sections.map((section) => ({
-      id: section.id,
-      name: section.name,
-      displayOrder: section.displayOrder,
-      items: section.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        displayOrder: item.displayOrder,
-        requiresNoteOnAttention: item.requiresNoteOnAttention,
-        entry: item.entries[0] || null,
-      })),
-      // Section completion stats
-      completed: section.items.filter((i) => i.entries.length > 0).length,
-      total: section.items.length,
-    }));
+    const result = sections
+      .filter((section) => section.items.length > 0) // Skip empty sections
+      .map((section) => ({
+        id: section.id,
+        name: section.name,
+        displayOrder: section.displayOrder,
+        items: section.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          displayOrder: item.displayOrder,
+          requiresNoteOnAttention: item.requiresNoteOnAttention,
+          entry: item.entries[0] || null,
+        })),
+        // Section completion stats
+        completed: section.items.filter((i) => i.entries.length > 0).length,
+        total: section.items.length,
+      }));
 
     res.json({ success: true, data: result });
   } catch (err) {

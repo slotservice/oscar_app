@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 export function LabFields() {
+  const { theme } = useTheme();
   const [plants, setPlants] = useState<any[]>([]);
   const [selectedPlant, setSelectedPlant] = useState('');
   const [fields, setFields] = useState<any[]>([]);
@@ -94,6 +96,27 @@ export function LabFields() {
     } catch (err: any) { alert(err.message); }
   };
 
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    title: { fontSize: 24, fontWeight: 700, color: theme.text },
+    select: { padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
+    form: { display: 'flex', gap: 12, marginBottom: 24, padding: 16, backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}` },
+    input: { flex: 1, padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    cancelBtn: { padding: '8px 16px', backgroundColor: theme.surfaceAlt, color: theme.textSecondary, border: `1px solid ${theme.border}`, borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    table: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, overflow: 'hidden' },
+    tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: theme.surfaceHover, borderBottom: `1px solid ${theme.border}`, fontWeight: 600, fontSize: 13, color: theme.textSecondary, textTransform: 'uppercase' },
+    tableRow: { display: 'flex', padding: '12px 16px', borderBottom: `1px solid ${theme.borderLight}`, alignItems: 'center' },
+    cell: { flex: 1, fontSize: 14, color: theme.text },
+    badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    actionBtn: { padding: '4px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 12, color: theme.textSecondary },
+    editBtn: { padding: '4px 10px', border: `1px solid ${theme.editBorder}`, borderRadius: 6, backgroundColor: theme.editBg, color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    empty: { textAlign: 'center', padding: 40, color: theme.textTertiary, fontSize: 14 },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -137,9 +160,9 @@ export function LabFields() {
         </div>
         {fields.map((field, i) => (
           <div key={field.id} style={{ ...s.tableRow, opacity: field.active ? 1 : 0.5 }}>
-            <span style={{ ...s.cell, width: 50, color: '#94a3b8' }}>{i + 1}</span>
+            <span style={{ ...s.cell, width: 50, color: theme.textTertiary }}>{i + 1}</span>
             <span style={{ ...s.cell, flex: 2, fontWeight: 600 }}>{field.name}</span>
-            <span style={{ ...s.cell, color: '#64748b' }}>{field.unit}</span>
+            <span style={{ ...s.cell, color: theme.textSecondary }}>{field.unit}</span>
             <span style={s.cell}>
               <span style={{ ...s.badge, backgroundColor: field.active ? '#dcfce7' : '#fee2e2', color: field.active ? '#22c55e' : '#ef4444' }}>
                 {field.active ? 'Active' : 'Disabled'}
@@ -159,24 +182,3 @@ export function LabFields() {
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 700 },
-  select: { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
-  addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  form: { display: 'flex', gap: 12, marginBottom: 24, padding: 16, backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0' },
-  input: { flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14 },
-  submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  cancelBtn: { padding: '8px 16px', backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' },
-  tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 13, color: '#64748b', textTransform: 'uppercase' },
-  tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' },
-  cell: { flex: 1, fontSize: 14 },
-  badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  actionBtn: { padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
-  editBtn: { padding: '4px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  empty: { textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 },
-};

@@ -29,6 +29,7 @@ enum RoundStatus {
 enum Condition {
   GREEN
   YELLOW
+  ORANGE
   RED
 }
 
@@ -38,17 +39,24 @@ enum Severity {
   CRITICAL
 }
 
+enum OperatorLevel {
+  VETERAN
+  EXPERIENCED
+  TRAINEE
+}
+
 // ─── Users & Plants ─────────────────────────────────────
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String
-  passwordHash String   @map("password_hash")
-  role         Role     @default(USER)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String
+  passwordHash  String        @map("password_hash")
+  role          Role          @default(USER)
+  operatorLevel OperatorLevel @default(TRAINEE) @map("operator_level")
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   plants UserPlant[]
   rounds DailyRound[]
@@ -103,13 +111,14 @@ model ChecklistSection {
 }
 
 model ChecklistItem {
-  id                      String  @id @default(uuid())
-  sectionId               String  @map("section_id")
+  id                      String        @id @default(uuid())
+  sectionId               String        @map("section_id")
   name                    String
   description             String?
-  displayOrder            Int     @map("display_order")
-  requiresNoteOnAttention Boolean @default(true) @map("requires_note_on_attention")
-  active                  Boolean @default(true)
+  displayOrder            Int           @map("display_order")
+  requiresNoteOnAttention Boolean       @default(true) @map("requires_note_on_attention")
+  minimumLevel            OperatorLevel @default(TRAINEE) @map("minimum_level")
+  active                  Boolean       @default(true)
 
   section ChecklistSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   entries ChecklistEntry[]
@@ -120,12 +129,14 @@ model ChecklistItem {
 // ─── Lab Configuration ──────────────────────────────────
 
 model LabField {
-  id           String  @id @default(uuid())
-  plantId      String  @map("plant_id")
-  name         String
-  unit         String
-  displayOrder Int     @map("display_order")
-  active       Boolean @default(true)
+  id                   String  @id @default(uuid())
+  plantId              String  @map("plant_id")
+  name                 String
+  unit                 String
+  displayOrder         Int     @map("display_order")
+  isRequired           Boolean @default(false) @map("is_required")
+  recommendedFrequency String  @default("daily") @map("recommended_frequency")
+  active               Boolean @default(true)
 
   plant      Plant           @relation(fields: [plantId], references: [id], onDelete: Cascade)
   entries    LabEntry[]
@@ -197,6 +208,14 @@ model DailyRound {
   overallCondition Condition?  @map("overall_condition")
   notes            String?
 
+  // ─── Stability Index Fields ───────────────────────────
+  stabilityScore   Float?  @map("stability_score")
+  displayScore     Float?  @map("display_score")
+  statusBand       String? @map("status_band")
+  confidenceLevel  String? @map("confidence_level")
+  primaryConcern   String? @map("primary_concern")
+  scoreBreakdown   Json?   @map("score_breakdown")
+
   plant              Plant              @relation(fields: [plantId], references: [id])
   operator           User               @relation(fields: [operatorId], references: [id])
   checklistEntries   ChecklistEntry[]
@@ -262,6 +281,15 @@ model Suggestion {
   severity     Severity
   acknowledged Boolean  @default(false)
   timestamp    DateTime @default(now())
+
+  // ─── OSCAR Logic Matrix Fields ────────────────────────
+  ruleId           String? @map("rule_id")
+  category         String?
+  title            String?
+  severityLevel    Int?    @map("severity_level")
+  deduction        Float?
+  confidence       String?
+  supportingFields Json?   @map("supporting_fields")
 
   round DailyRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
 

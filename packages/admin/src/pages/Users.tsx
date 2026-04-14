@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 export function Users() {
+  const { theme } = useTheme();
   const [users, setUsers] = useState<any[]>([]);
   const [plants, setPlants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER', operatorLevel: 'TRAINEE' });
 
   // Filters
   const [searchText, setSearchText] = useState('');
@@ -60,7 +62,7 @@ export function Users() {
     e.preventDefault();
     try {
       await adminApi.users.create(form);
-      setForm({ name: '', email: '', password: '', role: 'USER' });
+      setForm({ name: '', email: '', password: '', role: 'USER', operatorLevel: 'TRAINEE' });
       setShowForm(false);
       loadData();
     } catch (err: any) { alert(err.message); }
@@ -78,6 +80,7 @@ export function Users() {
         name: editingUser.name,
         email: editingUser.email,
         role: editingUser.role,
+        operatorLevel: editingUser.operatorLevel,
       });
       setEditingUser(null);
       loadData();
@@ -154,6 +157,38 @@ export function Users() {
     setBulkPlantId('');
   };
 
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    title: { fontSize: 24, fontWeight: 700, color: theme.text },
+    addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
+    form: { display: 'flex', gap: 12, marginBottom: 20, padding: 16, backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, flexWrap: 'wrap' },
+    input: { flex: 1, minWidth: 150, padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    cancelBtn: { padding: '8px 16px', backgroundColor: theme.surfaceAlt, color: theme.textSecondary, border: `1px solid ${theme.border}`, borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
+    editCard: { marginBottom: 20, padding: 16, backgroundColor: theme.editBg, borderRadius: 10, border: `1px solid ${theme.editBorder}` },
+    // Filters
+    filterBar: { display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' },
+    searchInput: { flex: 1, minWidth: 200, padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    filterSelect: { padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 13, color: theme.textSecondary, backgroundColor: theme.inputBg },
+    clearBtn: { padding: '6px 12px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 12, color: theme.textSecondary },
+    // Bulk
+    bulkBar: { display: 'flex', gap: 10, marginBottom: 16, padding: '12px 16px', backgroundColor: theme.editBg, borderRadius: 10, border: `1px solid ${theme.editBorder}`, alignItems: 'center', flexWrap: 'wrap' },
+    bulkBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+    // Table
+    table: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, overflow: 'hidden' },
+    tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: theme.surfaceHover, borderBottom: `1px solid ${theme.border}`, fontWeight: 600, fontSize: 13, color: theme.textSecondary, textTransform: 'uppercase', alignItems: 'center', gap: 8 },
+    tableRow: { display: 'flex', padding: '12px 16px', borderBottom: `1px solid ${theme.borderLight}`, alignItems: 'center', gap: 8 },
+    cell: { flex: 1, fontSize: 14, color: theme.text },
+    badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    roleBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
+    actionBtn: { padding: '4px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 12, color: theme.textSecondary },
+    editBtn: { padding: '4px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', cursor: 'pointer', fontSize: 12, color: '#1e40af', fontWeight: 600 },
+    deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600 },
+    assignSelect: { padding: '4px 8px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 12, color: theme.textSecondary, backgroundColor: theme.inputBg },
+    empty: { textAlign: 'center', padding: 40, color: theme.textTertiary, fontSize: 14 },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -175,6 +210,11 @@ export function Users() {
             <option value="USER">User</option>
             <option value="ADMIN">Admin</option>
           </select>
+          <select style={s.input} value={form.operatorLevel} onChange={(e) => setForm({ ...form, operatorLevel: e.target.value })}>
+            <option value="TRAINEE">Trainee</option>
+            <option value="EXPERIENCED">Experienced</option>
+            <option value="VETERAN">Veteran</option>
+          </select>
           <button type="submit" style={s.submitBtn}>Create User</button>
         </form>
       )}
@@ -182,13 +222,18 @@ export function Users() {
       {/* Edit Form */}
       {editingUser && (
         <div style={s.editCard}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Edit User</h3>
+          <h3 style={{ margin: '0 0 12px', fontSize: 16, color: theme.text }}>Edit User</h3>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <input style={s.input} placeholder="Name" value={editingUser.name} onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })} />
             <input style={s.input} placeholder="Email" value={editingUser.email} onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })} />
             <select style={s.input} value={editingUser.role} onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}>
               <option value="USER">User</option>
               <option value="ADMIN">Admin</option>
+            </select>
+            <select style={s.input} value={editingUser.operatorLevel || 'TRAINEE'} onChange={(e) => setEditingUser({ ...editingUser, operatorLevel: e.target.value })}>
+              <option value="TRAINEE">Trainee</option>
+              <option value="EXPERIENCED">Experienced</option>
+              <option value="VETERAN">Veteran</option>
             </select>
             <button onClick={handleSaveEdit} style={s.submitBtn}>Save</button>
             <button onClick={() => setEditingUser(null)} style={s.cancelBtn}>Cancel</button>
@@ -222,7 +267,7 @@ export function Users() {
       {/* Bulk Actions */}
       {selectedIds.size > 0 && (
         <div style={s.bulkBar}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>{selectedIds.size} selected</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>{selectedIds.size} selected</span>
           <select style={s.filterSelect} value={bulkPlantId} onChange={(e) => setBulkPlantId(e.target.value)}>
             <option value="">Select Plant...</option>
             {plants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -242,6 +287,7 @@ export function Users() {
           <span style={{ ...s.cell, flex: 2 }}>Name</span>
           <span style={{ ...s.cell, flex: 2 }}>Email</span>
           <span style={s.cell}>Role</span>
+          <span style={s.cell}>Level</span>
           <span style={s.cell}>Status</span>
           <span style={{ ...s.cell, flex: 3 }}>Actions</span>
         </div>
@@ -253,15 +299,22 @@ export function Users() {
               <span style={{ ...s.cell, width: 36, flex: 0 }}>
                 <input type="checkbox" checked={selectedIds.has(user.id)} onChange={() => toggleSelect(user.id)} />
               </span>
-              <span style={{ ...s.cell, width: 40, flex: 0, color: '#94a3b8', fontWeight: 600 }}>{rowNo}</span>
+              <span style={{ ...s.cell, width: 40, flex: 0, color: theme.textTertiary, fontWeight: 600 }}>{rowNo}</span>
               <span style={{ ...s.cell, flex: 2, fontWeight: 600 }}>{user.name}</span>
-              <span style={{ ...s.cell, flex: 2, color: '#64748b' }}>{user.email}</span>
+              <span style={{ ...s.cell, flex: 2, color: theme.textSecondary }}>{user.email}</span>
               <span style={s.cell}>
                 <span style={{
                   ...s.roleBadge,
                   backgroundColor: user.role === 'ADMIN' ? '#fef3c7' : '#e0e7ff',
                   color: user.role === 'ADMIN' ? '#d97706' : '#4338ca',
                 }}>{user.role}</span>
+              </span>
+              <span style={s.cell}>
+                <span style={{
+                  ...s.roleBadge,
+                  backgroundColor: user.operatorLevel === 'VETERAN' ? '#dcfce7' : user.operatorLevel === 'EXPERIENCED' ? '#fef9c3' : '#e0e7ff',
+                  color: user.operatorLevel === 'VETERAN' ? '#22c55e' : user.operatorLevel === 'EXPERIENCED' ? '#ca8a04' : '#4338ca',
+                }}>{user.operatorLevel || 'TRAINEE'}</span>
               </span>
               <span style={s.cell}>
                 <span style={{ ...s.badge, backgroundColor: user.active ? '#dcfce7' : '#fee2e2', color: user.active ? '#22c55e' : '#ef4444' }}>
@@ -296,35 +349,3 @@ export function Users() {
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 700 },
-  addBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 },
-  form: { display: 'flex', gap: 12, marginBottom: 20, padding: 16, backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', flexWrap: 'wrap' },
-  input: { flex: 1, minWidth: 150, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14 },
-  submitBtn: { padding: '8px 16px', backgroundColor: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  cancelBtn: { padding: '8px 16px', backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', fontWeight: 600 },
-  editCard: { marginBottom: 20, padding: 16, backgroundColor: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe' },
-  // Filters
-  filterBar: { display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' },
-  searchInput: { flex: 1, minWidth: 200, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
-  filterSelect: { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#64748b' },
-  clearBtn: { padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
-  // Bulk
-  bulkBar: { display: 'flex', gap: 10, marginBottom: 16, padding: '12px 16px', backgroundColor: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe', alignItems: 'center', flexWrap: 'wrap' },
-  bulkBtn: { padding: '8px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  // Table
-  table: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' },
-  tableHeader: { display: 'flex', padding: '12px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, fontSize: 13, color: '#64748b', textTransform: 'uppercase', alignItems: 'center', gap: 8 },
-  tableRow: { display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center', gap: 8 },
-  cell: { flex: 1, fontSize: 14 },
-  badge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  roleBadge: { fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12 },
-  actionBtn: { padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
-  editBtn: { padding: '4px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', cursor: 'pointer', fontSize: 12, color: '#1e40af', fontWeight: 600 },
-  deleteBtn: { padding: '4px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444', fontWeight: 600 },
-  assignSelect: { padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, color: '#64748b' },
-  empty: { textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 },
-};

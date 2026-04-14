@@ -28,7 +28,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     }
 
     const payload: AuthPayload = { userId: user.id, role: user.role };
-    const token = jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
+    const token = (jwt as any).sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
 
     res.json({
       success: true,

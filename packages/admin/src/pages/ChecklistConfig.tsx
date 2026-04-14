@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../api/client';
+import { useTheme } from '../theme/ThemeContext';
 
 export function ChecklistConfig() {
+  const { theme } = useTheme();
   const [plants, setPlants] = useState<any[]>([]);
   const [selectedPlant, setSelectedPlant] = useState('');
   const [sections, setSections] = useState<any[]>([]);
@@ -179,6 +181,29 @@ export function ChecklistConfig() {
     }
   };
 
+  const s: Record<string, React.CSSProperties> = {
+    loading: { textAlign: 'center', padding: 40, color: theme.textSecondary },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    title: { fontSize: 24, fontWeight: 700, color: theme.text },
+    plantSelect: { padding: '8px 12px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    addRow: { display: 'flex', gap: 12, marginBottom: 24 },
+    input: { flex: 1, padding: '10px 14px', border: `1px solid ${theme.border}`, borderRadius: 8, fontSize: 14, backgroundColor: theme.inputBg, color: theme.text },
+    addBtn: { padding: '10px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' },
+    sectionCard: { backgroundColor: theme.surface, borderRadius: 10, border: `1px solid ${theme.border}`, marginBottom: 16, overflow: 'hidden' },
+    sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', backgroundColor: theme.surfaceHover, borderBottom: `1px solid ${theme.border}` },
+    sectionName: { fontSize: 16, fontWeight: 600, margin: 0, color: theme.text },
+    itemCount: { fontSize: 13, color: theme.textSecondary },
+    item: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: `1px solid ${theme.borderLight}` },
+    itemName: { fontSize: 14, fontWeight: 500, color: theme.text },
+    toggleBtn: { padding: '3px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surface, cursor: 'pointer', fontSize: 12, color: theme.textSecondary },
+    editBtn: { padding: '3px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
+    addItemRow: { display: 'flex', gap: 8, padding: '10px 16px' },
+    itemInput: { flex: 1, padding: '6px 10px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 13, backgroundColor: theme.inputBg, color: theme.text },
+    addItemBtn: { width: 32, height: 32, border: `1px solid ${theme.border}`, borderRadius: 6, backgroundColor: theme.surfaceHover, cursor: 'pointer', fontSize: 18, color: theme.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    empty: { textAlign: 'center', padding: 40, color: theme.textTertiary, fontSize: 14 },
+  };
+
   if (loading) return <div style={s.loading}>Loading...</div>;
 
   return (
@@ -206,7 +231,7 @@ export function ChecklistConfig() {
               {editingSectionId === section.id ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
-                    style={{ padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, fontWeight: 600 }}
+                    style={{ padding: '4px 8px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 14, fontWeight: 600, backgroundColor: theme.inputBg, color: theme.text }}
                     value={editingSectionName}
                     onChange={(e) => setEditingSectionName(e.target.value)}
                     onKeyDown={(e) => {
@@ -241,7 +266,7 @@ export function ChecklistConfig() {
               {editingItemId === item.id ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                   <input
-                    style={{ padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13, fontWeight: 500, flex: 1 }}
+                    style={{ padding: '4px 8px', border: `1px solid ${theme.border}`, borderRadius: 6, fontSize: 13, fontWeight: 500, flex: 1, backgroundColor: theme.inputBg, color: theme.text }}
                     value={editingItemName}
                     onChange={(e) => setEditingItemName(e.target.value)}
                     onKeyDown={(e) => {
@@ -257,6 +282,18 @@ export function ChecklistConfig() {
                 <>
                   <span style={s.itemName}>{item.name}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select
+                      style={{ padding: '2px 6px', border: `1px solid ${theme.border}`, borderRadius: 4, fontSize: 11, backgroundColor: theme.inputBg, color: theme.textSecondary }}
+                      value={item.minimumLevel || 'TRAINEE'}
+                      onChange={async (e) => {
+                        try { await adminApi.sections.updateItem(item.id, { minimumLevel: e.target.value }); loadSections(); }
+                        catch (err: any) { alert(err.message); }
+                      }}
+                    >
+                      <option value="TRAINEE">All</option>
+                      <option value="EXPERIENCED">Exp+</option>
+                      <option value="VETERAN">Vet</option>
+                    </select>
                     <button onClick={() => toggleItem(item.id, item.active)} style={s.toggleBtn}>
                       {item.active ? 'Disable' : 'Enable'}
                     </button>
@@ -288,26 +325,3 @@ export function ChecklistConfig() {
     </div>
   );
 }
-
-const s: Record<string, React.CSSProperties> = {
-  loading: { textAlign: 'center', padding: 40, color: '#64748b' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 700 },
-  plantSelect: { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
-  addRow: { display: 'flex', gap: 12, marginBottom: 24 },
-  input: { flex: 1, padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 },
-  addBtn: { padding: '10px 16px', backgroundColor: '#1e40af', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' },
-  sectionCard: { backgroundColor: '#fff', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 16, overflow: 'hidden' },
-  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
-  sectionName: { fontSize: 16, fontWeight: 600, margin: 0 },
-  itemCount: { fontSize: 13, color: '#64748b' },
-  item: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid #f1f5f9' },
-  itemName: { fontSize: 14, fontWeight: 500 },
-  toggleBtn: { padding: '3px 10px', border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' },
-  editBtn: { padding: '3px 10px', border: '1px solid #bfdbfe', borderRadius: 6, backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  deleteBtn: { padding: '3px 10px', border: '1px solid #fecaca', borderRadius: 6, backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' },
-  addItemRow: { display: 'flex', gap: 8, padding: '10px 16px' },
-  itemInput: { flex: 1, padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13 },
-  addItemBtn: { width: 32, height: 32, border: '1px solid #e2e8f0', borderRadius: 6, backgroundColor: '#f8fafc', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  empty: { textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 },
-};

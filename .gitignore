@@ -35,3 +35,10 @@ coverage/
 packages/backend/test_prisma.js
 packages/mobile/gen_icon.js
 *.apk
+
+# Internal / private files (not for client)
+chat.md
+newchat.md
+project_status&plan.md
+oscar_beta_developer_spec.xlsx
+~$*.xlsx

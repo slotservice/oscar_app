@@ -1,5 +1,7 @@
 import { Severity, Condition } from '@prisma/client';
 import { prisma } from '../middleware/auth';
+import { runScoringEngine, buildContext } from './scoring/index';
+import { getStatusBand, statusBandToSeverity } from './scoring/types';
 
 interface EvaluationResult {
   suggestions: Array<{
@@ -8,55 +10,61 @@ interface EvaluationResult {
     ruleName: string;
     message: string;
     severity: Severity;
+    ruleId?: string;
+    category?: string;
+    title?: string;
+    severityLevel?: number;
+    deduction?: number;
+    confidence?: string;
+    supportingFields?: string[];
   }>;
   overallCondition: Condition;
+  stabilityScore?: number;
+  displayScore?: number;
+  statusBand?: string;
+  confidenceLevel?: string;
+  primaryConcern?: string;
+  scoreBreakdown?: any;
+  operatorGuidance?: string[];
 }
 
 /**
- * Evaluates a daily round by running all configured rules against
- * current lab values, observation tags, and recent trends.
+ * Evaluates a daily round using the OSCAR Scoring Engine.
  *
- * This is NOT AI — it is simple, deterministic threshold + tag logic.
+ * Flow:
+ * 1. Load current round data + 10 days history
+ * 2. Run legacy threshold/tag rules (backward compatibility)
+ * 3. Run OSCAR scoring engine (35 rules, stability index)
+ * 4. Store suggestions + update round with stability data
  */
 export async function evaluateRound(roundId: string, plantId: string): Promise<EvaluationResult> {
-  // Clear any previous suggestions for this round (re-evaluation)
+  // Clear previous suggestions
   await prisma.suggestion.deleteMany({ where: { roundId } });
 
-  // Load data in parallel
+  // Load all data in parallel
   const [labEntries, observationEntries, thresholdRules, tagRules, recentRounds] = await Promise.all([
-    // Current round's lab entries
     prisma.labEntry.findMany({
       where: { roundId },
       include: { labField: true },
     }),
-    // Current round's observation entries
     prisma.observationEntry.findMany({
       where: { roundId },
       include: { tag: true },
     }),
-    // Plant's threshold rules
     prisma.thresholdRule.findMany({
       where: { plantId, active: true },
       include: { labField: true },
     }),
-    // Plant's tag rules
     prisma.tagRule.findMany({
       where: { plantId, active: true },
       include: { tag: true },
     }),
-    // Last 10 days of rounds for trend analysis
     getRecentRounds(plantId, roundId, 10),
   ]);
 
-  const createdSuggestions: Array<{
-    id: string;
-    ruleType: string;
-    ruleName: string;
-    message: string;
-    severity: Severity;
-  }> = [];
+  const createdSuggestions: any[] = [];
 
-  // ─── 1. Evaluate Threshold Rules ───────────────────────
+  // ─── 1. Legacy Threshold Rules (keep for basic alerting) ─
 
   for (const rule of thresholdRules) {
     const labEntry = labEntries.find((e) => e.labFieldId === rule.labFieldId);
@@ -66,19 +74,14 @@ export async function evaluateRound(roundId: string, plantId: string): Promise<E
     let triggered = false;
     let severity: Severity = 'GREEN';
 
-    // Check critical thresholds first (higher priority)
     if (rule.criticalLow !== null && value < rule.criticalLow) {
-      triggered = true;
-      severity = 'CRITICAL';
+      triggered = true; severity = 'CRITICAL';
     } else if (rule.criticalHigh !== null && value > rule.criticalHigh) {
-      triggered = true;
-      severity = 'CRITICAL';
+      triggered = true; severity = 'CRITICAL';
     } else if (rule.cautionLow !== null && value < rule.cautionLow) {
-      triggered = true;
-      severity = 'CAUTION';
+      triggered = true; severity = 'CAUTION';
     } else if (rule.cautionHigh !== null && value > rule.cautionHigh) {
-      triggered = true;
-      severity = 'CAUTION';
+      triggered = true; severity = 'CAUTION';
     }
 
     if (triggered) {
@@ -95,7 +98,7 @@ export async function evaluateRound(roundId: string, plantId: string): Promise<E
     }
   }
 
-  // ─── 2. Evaluate Tag Rules ─────────────────────────────
+  // ─── 2. Legacy Tag Rules ──────────────────────────────
 
   for (const rule of tagRules) {
     const hasTag = observationEntries.some((e) => e.tagId === rule.tagId);
@@ -113,31 +116,89 @@ export async function evaluateRound(roundId: string, plantId: string): Promise<E
     }
   }
 
-  // ─── 3. Evaluate Trends (last 5-10 days) ──────────────
+  // ─── 3. OSCAR Scoring Engine ──────────────────────────
 
-  const trendSuggestions = await evaluateTrends(roundId, labEntries, recentRounds, thresholdRules);
-  createdSuggestions.push(...trendSuggestions);
+  // Get prior days' display scores for smoothing
+  const priorScores = await getPriorDisplayScores(plantId, roundId, 2);
+
+  // Build evaluation context
+  const ctx = buildContext(roundId, plantId, labEntries, observationEntries, recentRounds);
+
+  // Run scoring engine
+  const output = runScoringEngine(ctx, priorScores[0], priorScores[1]);
+
+  // Store OSCAR scoring rule suggestions
+  for (const rule of output.triggeredRules) {
+    // Map severity level to legacy Severity enum
+    let legacySeverity: Severity = 'GREEN';
+    if (rule.severityLevel >= 4) legacySeverity = 'CRITICAL';
+    else if (rule.severityLevel >= 3) legacySeverity = 'CAUTION';
+
+    const suggestion = await prisma.suggestion.create({
+      data: {
+        roundId,
+        ruleType: 'SCORING',
+        ruleName: rule.ruleId,
+        message: rule.message,
+        severity: legacySeverity,
+        ruleId: rule.ruleId,
+        category: rule.category,
+        title: rule.title,
+        severityLevel: rule.severityLevel,
+        deduction: rule.deduction,
+        confidence: rule.confidence,
+        supportingFields: rule.supportingFields,
+      },
+    });
+    createdSuggestions.push({
+      ...suggestion,
+      supportingFields: rule.supportingFields,
+    });
+  }
 
   // ─── 4. Compute Overall Condition ─────────────────────
 
-  let overallCondition: Condition = 'GREEN';
-  if (createdSuggestions.some((s) => s.severity === 'CRITICAL')) {
-    overallCondition = 'RED';
-  } else if (createdSuggestions.some((s) => s.severity === 'CAUTION')) {
-    overallCondition = 'YELLOW';
-  }
+  // Map stability score to 4-level condition
+  let overallCondition: Condition;
+  if (output.displayScore >= 85) overallCondition = 'GREEN';
+  else if (output.displayScore >= 70) overallCondition = 'YELLOW';
+  else if (output.displayScore >= 50) overallCondition = 'ORANGE';
+  else overallCondition = 'RED';
 
-  // Update the round's overall condition
+  // Update round with stability data
   await prisma.dailyRound.update({
     where: { id: roundId },
-    data: { overallCondition },
+    data: {
+      overallCondition,
+      stabilityScore: output.rawScore,
+      displayScore: output.displayScore,
+      statusBand: output.statusBand,
+      confidenceLevel: output.confidenceLevel,
+      primaryConcern: output.primaryConcern,
+      scoreBreakdown: output.categoryScores.map((cs) => ({
+        category: cs.category,
+        maxPoints: cs.maxPoints,
+        deductions: cs.deductions,
+        score: cs.score,
+      })),
+    },
   });
 
-  return { suggestions: createdSuggestions, overallCondition };
+  return {
+    suggestions: createdSuggestions,
+    overallCondition,
+    stabilityScore: output.rawScore,
+    displayScore: output.displayScore,
+    statusBand: output.statusBand,
+    confidenceLevel: output.confidenceLevel,
+    primaryConcern: output.primaryConcern,
+    scoreBreakdown: output.categoryScores,
+    operatorGuidance: output.operatorGuidance,
+  };
 }
 
 /**
- * Gets the most recent completed rounds for a plant (excluding current round).
+ * Gets recent completed rounds for trend analysis.
  */
 async function getRecentRounds(plantId: string, excludeRoundId: string, days: number) {
   const cutoffDate = new Date();
@@ -158,89 +219,31 @@ async function getRecentRounds(plantId: string, excludeRoundId: string, days: nu
 }
 
 /**
- * Evaluates trends by comparing current lab values to the rolling
- * average of recent rounds. Flags significant deviations.
+ * Gets prior days' display scores for smoothing.
+ * Returns [yesterday, twoDaysAgo] or nulls if not available.
  */
-async function evaluateTrends(
-  roundId: string,
-  currentLabEntries: Array<{ labFieldId: string; value: number; labField: { name: string; unit: string } }>,
-  recentRounds: Array<{ labEntries: Array<{ labFieldId: string; value: number }> }>,
-  _thresholdRules: Array<{ labFieldId: string }>
-): Promise<Array<{ id: string; ruleType: string; ruleName: string; message: string; severity: Severity }>> {
-  const suggestions: Array<{ id: string; ruleType: string; ruleName: string; message: string; severity: Severity }> = [];
+async function getPriorDisplayScores(
+  plantId: string,
+  excludeRoundId: string,
+  days: number,
+): Promise<Array<number | null>> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
 
-  if (recentRounds.length < 3) return suggestions; // Need at least 3 days of history
+  const priorRounds = await prisma.dailyRound.findMany({
+    where: {
+      plantId,
+      id: { not: excludeRoundId },
+      date: { gte: cutoffDate },
+      displayScore: { not: null },
+    },
+    orderBy: { date: 'desc' },
+    take: days,
+    select: { displayScore: true },
+  });
 
-  for (const currentEntry of currentLabEntries) {
-    // Gather historical values for this field
-    const historicalValues: number[] = [];
-    for (const round of recentRounds) {
-      const entry = round.labEntries.find((e) => e.labFieldId === currentEntry.labFieldId);
-      if (entry) historicalValues.push(entry.value);
-    }
-
-    if (historicalValues.length < 3) continue;
-
-    const avg = historicalValues.reduce((sum, v) => sum + v, 0) / historicalValues.length;
-    const stdDev = Math.sqrt(
-      historicalValues.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / historicalValues.length
-    );
-
-    // Flag if current value deviates more than 2 standard deviations from average
-    if (stdDev > 0) {
-      const deviation = Math.abs(currentEntry.value - avg) / stdDev;
-
-      if (deviation > 3) {
-        const suggestion = await prisma.suggestion.create({
-          data: {
-            roundId,
-            ruleType: 'TREND',
-            ruleName: `TREND_${currentEntry.labField.name.toUpperCase().replace(/\s+/g, '_')}`,
-            message: `${currentEntry.labField.name}: ${currentEntry.value} ${currentEntry.labField.unit} is significantly different from the ${historicalValues.length}-day average of ${avg.toFixed(2)}. Investigate.`,
-            severity: 'CRITICAL',
-          },
-        });
-        suggestions.push(suggestion);
-      } else if (deviation > 2) {
-        const suggestion = await prisma.suggestion.create({
-          data: {
-            roundId,
-            ruleType: 'TREND',
-            ruleName: `TREND_${currentEntry.labField.name.toUpperCase().replace(/\s+/g, '_')}`,
-            message: `${currentEntry.labField.name}: ${currentEntry.value} ${currentEntry.labField.unit} deviates from the ${historicalValues.length}-day average of ${avg.toFixed(2)}. Monitor closely.`,
-            severity: 'CAUTION',
-          },
-        });
-        suggestions.push(suggestion);
-      }
-    }
-
-    // Check for consecutive declining/rising trend (5+ days in same direction)
-    if (historicalValues.length >= 4) {
-      const allValues = [currentEntry.value, ...historicalValues].slice(0, 5);
-      let isRising = true;
-      let isFalling = true;
-
-      for (let i = 0; i < allValues.length - 1; i++) {
-        if (allValues[i] <= allValues[i + 1]) isRising = false;
-        if (allValues[i] >= allValues[i + 1]) isFalling = false;
-      }
-
-      if (isRising || isFalling) {
-        const direction = isRising ? 'rising' : 'falling';
-        const suggestion = await prisma.suggestion.create({
-          data: {
-            roundId,
-            ruleType: 'TREND',
-            ruleName: `TREND_DIRECTION_${currentEntry.labField.name.toUpperCase().replace(/\s+/g, '_')}`,
-            message: `${currentEntry.labField.name} has been consistently ${direction} over the last ${allValues.length} days. Review trend.`,
-            severity: 'CAUTION',
-          },
-        });
-        suggestions.push(suggestion);
-      }
-    }
-  }
-
-  return suggestions;
+  return [
+    priorRounds[0]?.displayScore ?? null,
+    priorRounds[1]?.displayScore ?? null,
+  ];
 }
